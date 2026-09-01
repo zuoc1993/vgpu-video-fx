@@ -13,6 +13,7 @@ export async function startApp(): Promise<() => void> {
   const paramTitle = required("#param-title", HTMLElement);
   const paramDesc = required("#param-desc", HTMLElement);
   const status = required("#status", HTMLElement);
+  const fps = required("#fps", HTMLElement);
   const meta = required("#video-meta", HTMLElement);
   const input = required("#video-input", HTMLInputElement);
   const playBtn = required("#play-btn", HTMLButtonElement);
@@ -36,6 +37,8 @@ export async function startApp(): Promise<() => void> {
   let params: ParamValues = engine.defaults(effectId);
   let drawing = false;
   let queued = false;
+  let fpsFrames = 0;
+  let fpsStamp = performance.now();
 
   const draw = async () => {
     if (drawing) {
@@ -53,6 +56,14 @@ export async function startApp(): Promise<() => void> {
         videoDuration: video.duration,
         frame: { source: video.el },
       });
+      fpsFrames += 1;
+      const now = performance.now();
+      const elapsed = now - fpsStamp;
+      if (elapsed >= 500) {
+        fps.textContent = `${Math.round((fpsFrames * 1000) / elapsed)} fps`;
+        fpsFrames = 0;
+        fpsStamp = now;
+      }
     } catch (err) {
       status.textContent = err instanceof Error ? err.message : String(err);
     } finally {

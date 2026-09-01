@@ -1,0 +1,16 @@
+{
+  "name": "@vgpu-fx/sidecar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "vgpu-fx-sidecar": "./src/start.mjs"
+  },
+  "scripts": {
+    "start": "node src/start.mjs"
+  },
+  "dependencies": {
+    "@vgpu-fx/effect-core": "*",
+    "vgpu": "^0.3.1"
+  }
+}

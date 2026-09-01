@@ -15,7 +15,9 @@
     "check:video-wait": "node scripts/check-video-wait.mjs",
     "check:frames": "node scripts/check-frames.mjs",
     "typecheck": "tsc -p packages/effect-core && tsc -p packages/web",
-    "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run check:frames && npm run check:video-wait && npm run typecheck"
+    "sidecar": "npm run start -w @vgpu-fx/sidecar",
+    "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
+    "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run smoke:sidecar && npm run check:frames && npm run check:video-wait && npm run typecheck"
   },
   "dependencies": {
     "vgpu": "^0.3.1"

@@ -61,6 +61,7 @@ export class EffectEngine {
 
   private srcTex: Texture | null = null;
   private out: Target | null = null;
+  private outPool: Target[] = [];
   private placeholder: Texture | null = null;
   private canvasSurface: Surface | null = null;
   private compiled = new Set<string>();
@@ -151,19 +152,45 @@ export class EffectEngine {
     };
   }
 
-  /** Same as `render` over many frames, one Gpu, no re-init. */
+  /**
+   * Draw every frame onto its own dest, then read them together.
+   * ponytail: still N draws (shaders sample one texture_2d). Ceiling is one
+   * atlas + one read; don't put multiple set()+pass in one frame() — uniforms
+   * write in-place and would all see the last time.
+   */
   async renderBatch(opts: BatchOptions): Promise<PixelBuffer[]> {
-    const out: PixelBuffer[] = [];
+    if (opts.frames.length === 0) return [];
+    const [width, height] = frameSize(opts.frames[0]!);
     for (const item of opts.frames) {
-      out.push(await this.render({
+      const [w, h] = frameSize(item);
+      if (w !== width || h !== height) throw new Error("renderBatch: mixed frame sizes");
+    }
+    const dests = this.ensureOutPool(opts.frames.length, width, height);
+    await this.compile({ colors: [dests[0]!.format] });
+    let prev: number | undefined;
+    for (let i = 0; i < opts.frames.length; i += 1) {
+      const item = opts.frames[i]!;
+      const time = frameTime(item) ?? 0;
+      const uploaded = this.upload(item);
+      this.draw({
         effect: opts.effect,
         params: opts.params,
-        time: frameTime(item),
+        time,
+        videoTime: time,
+        deltaTime: prev === undefined ? 0 : time - prev,
         videoDuration: opts.videoDuration,
         frame: item,
-      }));
+      }, uploaded, dests[i]!);
+      prev = time;
     }
-    return out;
+    const pixels = await Promise.all(dests.map((dest) => dest.read()));
+    await this.gpu.settled();
+    return pixels.map((data, i) => ({
+      width,
+      height,
+      data,
+      time: frameTime(opts.frames[i]!),
+    }));
   }
 
   dispose(): void {
@@ -177,6 +204,10 @@ export class EffectEngine {
     this.placeholder = null;
     if (this.out && "destroy" in this.out) (this.out as { destroy: () => void }).destroy();
     this.out = null;
+    for (const dest of this.outPool) {
+      if ("destroy" in dest) (dest as { destroy: () => void }).destroy();
+    }
+    this.outPool = [];
     if (this.ownsGpu) this.gpu.dispose();
   }
 
@@ -245,6 +276,17 @@ export class EffectEngine {
     }
     if (this.out.size[0] !== width || this.out.size[1] !== height) this.out.resize([width, height]);
     return this.out;
+  }
+
+  private ensureOutPool(count: number, width: number, height: number): Target[] {
+    while (this.outPool.length < count) {
+      this.outPool.push(target(this.gpu, { size: [width, height], format: "rgba8unorm" }));
+    }
+    for (let i = 0; i < count; i += 1) {
+      const dest = this.outPool[i]!;
+      if (dest.size[0] !== width || dest.size[1] !== height) dest.resize([width, height]);
+    }
+    return this.outPool.slice(0, count);
   }
 
   private bindCanvas(canvas: HTMLCanvasElement): void {

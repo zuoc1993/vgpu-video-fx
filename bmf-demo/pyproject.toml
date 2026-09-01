@@ -1,0 +1,16 @@
+[project]
+name = "bmf-demo"
+version = "0.0.1"
+description = "BMF decode → vgpu-fx sidecar → encode"
+requires-python = ">=3.10,<3.13"
+dependencies = []
+
+[dependency-groups]
+bmf = [
+    "babitmf>=0.2.0",
+    "numpy>=1.19.5",
+]
+
+[tool.uv]
+package = false
+default-groups = ["bmf"]

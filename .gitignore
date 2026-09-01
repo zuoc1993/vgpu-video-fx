@@ -13,3 +13,9 @@ Video Effects/
 
 .cursor/
 .agents/
+
+__pycache__/
+*.pyc
+.venv/
+bmf-demo/*.mp4
+bmf-demo/output/

@@ -83,6 +83,18 @@ const none = await engine.render({
 if (gpuError) throw gpuError;
 assertNear(none.data, data, "none identity");
 
+const batch = await engine.renderBatch({
+  effect: "none",
+  frames: [
+    { width: size, height: size, data, time: 0 },
+    { width: size, height: size, data, time: 0.1 },
+    { width: size, height: size, data, time: 0.2 },
+  ],
+});
+if (gpuError) throw gpuError;
+if (batch.length !== 3) throw new Error(`batch length ${batch.length}`);
+for (const frame of batch) assertNear(frame.data, data, "none batch");
+
 for (const id of ids) {
   if (id === "none") continue;
   const out = await engine.render({
