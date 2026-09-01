@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "@webgpu/types", "@vgpu/wgsl/wgsl-types"],
+    "paths": {
+      "@vgpu-fx/effect-core": ["../effect-core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

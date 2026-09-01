@@ -1,0 +1,16 @@
+{
+  "name": "@vgpu-fx/effect-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./engine": "./src/engine.ts"
+  },
+  "dependencies": {
+    "vgpu": "^0.3.1"
+  },
+  "peerDependencies": {
+    "vgpu": "^0.3.1"
+  }
+}

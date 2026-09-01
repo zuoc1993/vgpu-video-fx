@@ -1,0 +1,32 @@
+{
+  "name": "vgpu-video-fx",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @vgpu-fx/web",
+    "build": "npm run build -w @vgpu-fx/web",
+    "preview": "npm run preview -w @vgpu-fx/web",
+    "check:shaders": "node scripts/check-shaders.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "check:video-wait": "node scripts/check-video-wait.mjs",
+    "check:frames": "node scripts/check-frames.mjs",
+    "typecheck": "tsc -p packages/effect-core && tsc -p packages/web",
+    "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run check:frames && npm run check:video-wait && npm run typecheck"
+  },
+  "dependencies": {
+    "vgpu": "^0.3.1"
+  },
+  "devDependencies": {
+    "@webgpu/types": "^0.1.72",
+    "typescript": "^5.9.2",
+    "vite": "^8.2.2"
+  },
+  "allowScripts": {
+    "@vgpu/adapter-node@0.3.1": true,
+    "webgpu@0.4.0": true
+  }
+}

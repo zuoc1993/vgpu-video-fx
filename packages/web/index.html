@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>vgpu Video FX</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">vgpu Video FX</div>
+        <label class="file-btn">
+          选择视频
+          <input id="video-input" type="file" accept="video/*" />
+        </label>
+        <button id="sample-btn" type="button">加载示例</button>
+        <div id="video-meta" class="meta">未选择视频</div>
+        <div class="spacer"></div>
+        <button id="play-btn" type="button" disabled>播放</button>
+      </header>
+      <main class="workspace">
+        <aside class="panel list-panel">
+          <h2>特效</h2>
+          <div id="effect-list" class="effect-list"></div>
+        </aside>
+        <section class="preview-panel">
+          <div class="stage">
+            <canvas id="preview"></canvas>
+            <div id="status" class="status">正在初始化 WebGPU…</div>
+          </div>
+        </section>
+        <aside class="panel param-panel">
+          <h2 id="param-title">参数</h2>
+          <p id="param-desc" class="desc"></p>
+          <div id="param-list" class="param-list"></div>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
