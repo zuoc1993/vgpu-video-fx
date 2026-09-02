@@ -30,6 +30,8 @@ class VgpuFx(Module):
         self.frames = 0
         self.batches = 0
         self.render_s = 0.0
+        self.cvt_in_s = 0.0
+        self.cvt_out_s = 0.0
         self._reported = False
 
     def init(self):
@@ -59,7 +61,9 @@ class VgpuFx(Module):
                 if not pkt.defined() or pkt.timestamp == Timestamp.UNSET:
                     continue
                 vf = pkt.get(VideoFrame)
+                tc = time.perf_counter()
                 rgba = vf_to_rgba(vf)
+                self.cvt_in_s += time.perf_counter() - tc
                 self.pending.append((pkt, vf, rgba, vf_pts_sec(vf, pkt)))
                 if len(self.pending) >= self.batch:
                     self._flush(outgoing)
@@ -86,12 +90,14 @@ class VgpuFx(Module):
         self.batches += 1
         self.frames += len(self.pending)
         stride = width * height * 4
+        tc = time.perf_counter()
         for i, (pkt, vf, _, _) in enumerate(self.pending):
             rgba = np.frombuffer(out[i * stride : (i + 1) * stride], dtype=np.uint8).reshape(height, width, 4)
             out_vf = rgba_to_vf(rgba, vf)
             out_pkt = Packet(out_vf)
             out_pkt.timestamp = pkt.timestamp
             outgoing.put(out_pkt)
+        self.cvt_out_s += time.perf_counter() - tc
         self.pending = []
 
     def _report(self):
@@ -101,21 +107,29 @@ class VgpuFx(Module):
         fps = self.frames / self.render_s if self.render_s else 0
         print(
             f"vgpu_fx {self.effect}: {self.frames} frames / {self.batches} batches×{self.batch} "
-            f"/ {self.render_s:.3f}s sidecar = {fps:.1f} fps",
+            f"/ {self.render_s:.3f}s sidecar = {fps:.1f} fps "
+            f"| cvt-in {self.cvt_in_s:.3f}s cvt-out {self.cvt_out_s:.3f}s",
             flush=True,
         )
 
 
 def vf_to_rgba(vf) -> np.ndarray:
     rgb = vf.reformat(mp.PixelInfo(mp.kPF_RGB24)).frame().plane(0).numpy()
+    # ponytail: per-channel strided writes vectorize (1.6ms); a 3-channel
+    # slice assign does not (7.2ms)
     out = np.empty((rgb.shape[0], rgb.shape[1], 4), dtype=np.uint8)
-    out[:, :, :3] = rgb
+    out[:, :, 0] = rgb[:, :, 0]
+    out[:, :, 1] = rgb[:, :, 1]
+    out[:, :, 2] = rgb[:, :, 2]
     out[:, :, 3] = 255
     return out
 
 
 def rgba_to_vf(rgba: np.ndarray, src_vf):
-    rgb = np.ascontiguousarray(rgba[:, :, :3])
+    rgb = np.empty(rgba.shape[:2] + (3,), dtype=np.uint8)
+    rgb[:, :, 0] = rgba[:, :, 0]
+    rgb[:, :, 1] = rgba[:, :, 1]
+    rgb[:, :, 2] = rgba[:, :, 2]
     frame = mp.Frame(mp.from_numpy(rgb), mp.PixelInfo(mp.kPF_RGB24))
     out = VideoFrame(frame)
     if hasattr(out, "copy_props"):

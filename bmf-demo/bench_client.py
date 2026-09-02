@@ -4,7 +4,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from vgpu_fx_protocol import VgpuFxClient
 
-W, H, N = 1664, 1080, 15
+W, H = 1664, 1080
+N = int(sys.argv[1]) if len(sys.argv) > 1 else 15
 frame = os.urandom(W * H * 4)
 pixels = frame * N
 times = [i / 30 for i in range(N)]
