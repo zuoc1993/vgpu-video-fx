@@ -31,6 +31,7 @@ EFFECTS = (
     "screen-shake",
     "zoom-in",
     "zoom-out",
+    "cylinder-wrap",
 )
 
 

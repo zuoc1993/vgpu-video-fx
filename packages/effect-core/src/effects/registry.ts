@@ -1,5 +1,6 @@
 import type { EffectDefinition } from "./types.ts";
 import { cameraShakeEffect } from "./camera-shake/index.ts";
+import { cylinderWrapEffect } from "./cylinder-wrap/index.ts";
 import { glitchEffect } from "./glitch/index.ts";
 import { handheldCamEffect } from "./handheld-cam/index.ts";
 import { localPushEffect } from "./local-push/index.ts";
@@ -18,6 +19,7 @@ export const catalog: readonly EffectDefinition[] = [
   screenShakeEffect,
   zoomInEffect,
   zoomOutEffect,
+  cylinderWrapEffect,
 ];
 
 export function getEffect(id: string): EffectDefinition | undefined {
