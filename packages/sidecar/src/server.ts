@@ -37,9 +37,13 @@ async function session(socket: Socket): Promise<void> {
   const reader = sockReader(socket);
   try {
     for (;;) {
+      const tr = performance.now();
       const req = await readRequest(reader);
+      const tq = performance.now();
       const res = await exclusive(() => handle(req));
+      const tw = performance.now();
       await writeAll(socket, res);
+      if (TIMING) console.error(`sidecar io: read ${(tq - tr).toFixed(1)}ms write ${(performance.now() - tw).toFixed(1)}ms`);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -64,10 +68,13 @@ async function readRequest(reader: SockReader): Promise<{ header: RequestHeader;
   return { header, pixels };
 }
 
+const TIMING = !!process.env.VGPU_FX_TIMING;
+
 async function handle(req: { header: RequestHeader; pixels: Buffer }): Promise<Buffer> {
   const { header, pixels } = req;
   lastGpuError = undefined;
   try {
+    const t0 = performance.now();
     const stride = header.width * header.height * 4;
     const frames = header.times.map((time, i) => ({
       width: header.width,
@@ -82,12 +89,14 @@ async function handle(req: { header: RequestHeader; pixels: Buffer }): Promise<B
       frames,
     });
     if (lastGpuError) throw lastGpuError;
+    const t1 = performance.now();
     const out = Buffer.allocUnsafe(stride * header.count);
     for (let i = 0; i < rendered.length; i += 1) {
       const src = rendered[i]!.data;
       if (src.byteLength < stride) throw new Error("short render");
       out.set(src.subarray(0, stride), i * stride);
     }
+    if (TIMING) console.error(`sidecar ${header.effect} ×${header.count}: render ${(t1 - t0).toFixed(1)}ms pack ${(performance.now() - t1).toFixed(1)}ms`);
     return encodeMessage({
       id: header.id,
       ok: true,

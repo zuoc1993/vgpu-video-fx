@@ -19,7 +19,9 @@ def encode_message(header: Mapping[str, object], pixels: bytes = b"") -> bytes:
 def read_exact(sock: socket.socket, n: int) -> bytes:
     chunks = bytearray()
     while len(chunks) < n:
-        piece = sock.recv(n - len(chunks))
+        # ponytail: cap recv size — an uncapped recv(108MB) makes CPython
+        # allocate a fresh 108MB buffer per call, page faults drop it to ~50MB/s
+        piece = sock.recv(min(n - len(chunks), 1 << 20))
         if not piece:
             raise ConnectionError("socket closed")
         chunks.extend(piece)
@@ -41,6 +43,9 @@ class VgpuFxClient:
     def __init__(self, path: str = DEFAULT_SOCK) -> None:
         self.path = path
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # Bigger kernel buffers: ~1.5x on the 100MB+ batch transfers
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4 << 20)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 4 << 20)
         try:
             self._sock.connect(path)
         except OSError as err:

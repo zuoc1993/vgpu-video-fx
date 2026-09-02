@@ -167,11 +167,18 @@ export class EffectEngine {
     }
     const dests = this.ensureOutPool(opts.frames.length, width, height);
     await this.compile({ colors: [dests[0]!.format] });
+    const timing = typeof process !== "undefined" && !!process.env.VGPU_FX_TIMING;
+    let uploadMs = 0;
+    let drawMs = 0;
+    const t0 = performance.now();
     let prev: number | undefined;
     for (let i = 0; i < opts.frames.length; i += 1) {
       const item = opts.frames[i]!;
       const time = frameTime(item) ?? 0;
+      const tu = performance.now();
       const uploaded = this.upload(item);
+      uploadMs += performance.now() - tu;
+      const td = performance.now();
       this.draw({
         effect: opts.effect,
         params: opts.params,
@@ -181,10 +188,14 @@ export class EffectEngine {
         videoDuration: opts.videoDuration,
         frame: item,
       }, uploaded, dests[i]!);
+      drawMs += performance.now() - td;
       prev = time;
     }
+    const t1 = performance.now();
     const pixels = await Promise.all(dests.map((dest) => dest.read()));
+    const t2 = performance.now();
     await this.gpu.settled();
+    if (timing) console.error(`engine ×${opts.frames.length}: upload ${uploadMs.toFixed(1)}ms draw ${drawMs.toFixed(1)}ms readback ${(t2 - t1).toFixed(1)}ms settle ${(performance.now() - t2).toFixed(1)}ms (total ${(performance.now() - t0).toFixed(1)}ms)`);
     return pixels.map((data, i) => ({
       width,
       height,
