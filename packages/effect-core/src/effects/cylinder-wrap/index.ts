@@ -5,7 +5,7 @@ export const cylinderWrapEffect: EffectDefinition = {
   id: "cylinder-wrap",
   name: "Cylinder wrap",
   category: "3D",
-  description: "平面视窗卷成竖轴滚筒内壁并绕轴旋转，面板带黑缝与圆角，末段前推铺满全屏。",
+    description: "平面视窗卷成竖轴滚筒（外壁/内壁两种视角）绕轴旋转，面板带黑缝、圆角与鼓面明暗，末段前推铺满全屏。",
   params: [
     { key: "radius", label: "滚筒半径", type: "range", min: 0.4, max: 2, step: 0.01, default: 0.9 },
     { key: "depth", label: "纵深感", type: "range", min: 0, max: 2, step: 0.01, default: 0.9 },
