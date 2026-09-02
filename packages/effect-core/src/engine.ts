@@ -167,7 +167,7 @@ export class EffectEngine {
     }
     const dests = this.ensureOutPool(opts.frames.length, width, height);
     await this.compile({ colors: [dests[0]!.format] });
-    const timing = typeof process !== "undefined" && !!process.env.VGPU_FX_TIMING;
+    const timing = !!(globalThis as { process?: { env?: Record<string, string> } }).process?.env?.VGPU_FX_TIMING;
     let uploadMs = 0;
     let drawMs = 0;
     const t0 = performance.now();
