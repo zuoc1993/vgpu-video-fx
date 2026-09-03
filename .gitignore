@@ -19,3 +19,9 @@ __pycache__/
 .venv/
 bmf-demo/*.mp4
 bmf-demo/output/
+
+# effect-rs build artifacts
+effect-rs/target/
+effect-rs/pkg/
+.cargo-home/
+

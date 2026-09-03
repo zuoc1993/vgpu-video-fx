@@ -1,12 +1,20 @@
-"""Decode sample.mp4 through every catalog effect → output/{effect}.mp4.
+"""Decode sample.mp4 through the catalog → output/{effect}.mp4.
 
-Start the sidecar first:
+Effect selection follows the backend:
+  - native (effect_rs): only the effects ported to Rust (effect_rs.catalog())
+  - socket (sidecar):   the full TS catalog (EFFECTS below)
+
+Start the sidecar first for the socket backend:
   npm run sidecar
 
 Then:
-  uv run run_demo.py
+  VGPU_FX_BACKEND=native uv run run_demo.py   # effect-rs subset
+  VGPU_FX_BACKEND=socket uv run run_demo.py   # all effects
+  uv run run_demo.py                          # auto: native if installed, else socket
 
-Default batch is 15 frames per sidecar roundtrip (VGPU_FX_BATCH).
+Default batch is 15 frames per roundtrip (VGPU_FX_BATCH).
+VGPU_FX_EFFECTS=a,b,c further narrows the selection.
+VGPU_FX_LIST_ONLY=1 prints the plan without rendering.
 """
 
 from __future__ import annotations
@@ -90,12 +98,13 @@ def load_bmf():
         raise SystemExit("need BabitMF: uv sync") from err
 
 
-def run_one(bmf, inp: str, effect: str, duration: float, sock: str, batch: int, out_dir: str) -> str:
+def run_one(bmf, inp: str, effect: str, duration: float, sock: str, batch: int, backend: str, out_dir: str) -> str:
     out = os.path.join(out_dir, f"{effect}.mp4")
     option = {
         "effect": effect,
         "socket": sock,
         "batch": batch,
+        "backend": backend,
         "params": {},
         "videoDuration": duration,
     }
@@ -113,8 +122,35 @@ def run_one(bmf, inp: str, effect: str, duration: float, sock: str, batch: int, 
     return out
 
 
+def resolve_backend() -> str:
+    backend = os.environ.get("VGPU_FX_BACKEND", "")
+    if backend not in ("native", "socket"):
+        try:
+            import effect_rs  # noqa: F401
+            backend = "native"
+        except ImportError:
+            backend = "socket"
+    return backend
+
+
+def plan_effects(backend: str) -> list[str]:
+    """native → effects available in effect-rs; socket → the full TS catalog."""
+    if backend == "native":
+        try:
+            import effect_rs
+            available = {e["id"] for e in effect_rs.catalog()}
+        except ImportError:
+            available = set()
+        targets = [e for e in EFFECTS if e in available]
+    else:
+        targets = list(EFFECTS)
+    wanted = [e.strip() for e in os.environ.get("VGPU_FX_EFFECTS", "").split(",") if e.strip()]
+    if wanted:
+        targets = [e for e in targets if e in wanted]
+    return targets
+
+
 def main() -> None:
-    bmf = load_bmf()
     inp = os.path.join(ROOT, "public", "sample.mp4")
     if not os.path.isfile(inp):
         raise SystemExit(f"missing input {inp}")
@@ -123,8 +159,14 @@ def main() -> None:
     os.makedirs(out_dir, exist_ok=True)
     sock = os.environ.get("VGPU_FX_SOCK", "/tmp/vgpu-fx.sock")
     batch = int(os.environ.get("VGPU_FX_BATCH", "15"))
-    for effect in EFFECTS:
-        run_one(bmf, inp, effect, duration, sock, batch, out_dir)
+    backend = resolve_backend()
+    targets = plan_effects(backend)
+    print(f"backend={backend} effects=({len(targets)}) {','.join(targets)}", flush=True)
+    if os.environ.get("VGPU_FX_LIST_ONLY"):
+        return
+    bmf = load_bmf()
+    for effect in targets:
+        run_one(bmf, inp, effect, duration, sock, batch, backend, out_dir)
 
 
 if __name__ == "__main__":

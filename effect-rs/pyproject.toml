@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "effect-rs"
+version = "0.1.0"
+description = "CPU video effect engine (Rust core) - python bindings"
+requires-python = ">=3.10"
+license = { text = "GPL-2.0-only" }
+
+[tool.maturin]
+module-name = "effect_rs"
+features = ["python"]

@@ -10,6 +10,14 @@ import numpy as np
 from vgpu_fx_protocol import DEFAULT_SOCK, VgpuFxClient
 
 try:
+    import effect_rs
+
+    NATIVE_AVAILABLE = True
+except ImportError:
+    effect_rs = None  # type: ignore[assignment]
+    NATIVE_AVAILABLE = False
+
+try:
     from bmf import Log, LogLevel, Module, Packet, ProcessResult, Timestamp, VideoFrame
     import bmf.hmp as mp
 except ImportError:  # pragma: no cover
@@ -22,6 +30,12 @@ class VgpuFx(Module):
         option = option or {}
         self.effect = str(option.get("effect") or "none")
         self.params = option.get("params") or {}
+        backend = str(option.get("backend") or os.environ.get("VGPU_FX_BACKEND") or "")
+        if backend not in ("native", "socket"):
+            backend = "native" if NATIVE_AVAILABLE else "socket"
+        if backend == "native" and not NATIVE_AVAILABLE:
+            backend = "socket"
+        self.backend = backend
         self.socket_path = str(option.get("socket") or os.environ.get("VGPU_FX_SOCK") or DEFAULT_SOCK)
         self.video_duration = float(option.get("videoDuration") or 0)
         self.batch = max(1, int(option.get("batch") or 15))
@@ -35,7 +49,8 @@ class VgpuFx(Module):
         self._reported = False
 
     def init(self):
-        self.client = VgpuFxClient(self.socket_path)
+        if self.backend == "socket" and self.client is None:
+            self.client = VgpuFxClient(self.socket_path)
 
     def close(self):
         self._report()
@@ -70,22 +85,33 @@ class VgpuFx(Module):
         return ProcessResult.OK
 
     def _flush(self, outgoing):
-        if not self.pending or self.client is None:
+        if not self.pending or (self.backend == "socket" and self.client is None):
             self.pending = []
             return
         height, width = self.pending[0][2].shape[:2]
         pixels = b"".join(np.ascontiguousarray(item[2]).tobytes() for item in self.pending)
         times = [item[3] for item in self.pending]
         t0 = time.perf_counter()
-        out = self.client.render(
-            effect=self.effect,
-            width=width,
-            height=height,
-            pixels=pixels,
-            times=times,
-            params=self.params,
-            video_duration=self.video_duration,
-        )
+        if self.backend == "native":
+            out = effect_rs.render_batch(  # type: ignore[union-attr]
+                self.effect,
+                width,
+                height,
+                pixels,
+                times,
+                params=dict(self.params),
+                video_duration=self.video_duration,
+            )
+        else:
+            out = self.client.render(
+                effect=self.effect,
+                width=width,
+                height=height,
+                pixels=pixels,
+                times=times,
+                params=self.params,
+                video_duration=self.video_duration,
+            )
         self.render_s += time.perf_counter() - t0
         self.batches += 1
         self.frames += len(self.pending)
@@ -106,8 +132,8 @@ class VgpuFx(Module):
         self._reported = True
         fps = self.frames / self.render_s if self.render_s else 0
         print(
-            f"vgpu_fx {self.effect}: {self.frames} frames / {self.batches} batches×{self.batch} "
-            f"/ {self.render_s:.3f}s sidecar = {fps:.1f} fps "
+            f"vgpu_fx[{self.backend}] {self.effect}: {self.frames} frames / {self.batches} batches×{self.batch} "
+            f"/ {self.render_s:.3f}s render = {fps:.1f} fps "
             f"| cvt-in {self.cvt_in_s:.3f}s cvt-out {self.cvt_out_s:.3f}s",
             flush=True,
         )

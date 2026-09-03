@@ -16,6 +16,9 @@
     "check:frames": "node scripts/check-frames.mjs",
     "typecheck": "tsc -p packages/effect-core && tsc -p packages/web",
     "sidecar": "npm run start -w @vgpu-fx/sidecar",
+    "build:effect-rs:wasm": "wasm-pack build effect-rs --release --target web --out-dir pkg -- --no-default-features --features wasm",
+    "build:effect-rs:py": "cd bmf-demo && uvx maturin build --release -m ../effect-rs/Cargo.toml && uv pip install --reinstall effect-rs/target/wheels/effect_rs-*.whl",
+    "test:effect-rs": "cargo test --manifest-path effect-rs/Cargo.toml",
     "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
     "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run smoke:sidecar && npm run check:frames && npm run check:video-wait && npm run typecheck"
   },

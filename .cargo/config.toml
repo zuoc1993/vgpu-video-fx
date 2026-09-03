@@ -1,0 +1,6 @@
+# wasm-only flags: SIMD128 for the wasm preview build. Native (python)
+# builds are unaffected; host builds of wasm-bindgen CLI likewise.
+# NOTE: cargo config discovery walks up from the CWD (not the manifest), so
+# this lives at the repo root where wasm-pack is invoked.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

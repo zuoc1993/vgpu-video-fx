@@ -4,10 +4,75 @@ import {
   type EffectDefinition,
   type ParamValues,
 } from "@vgpu-fx/effect-core";
+import { RsEffectEngine, type RsEffectMeta } from "./rs-engine.ts";
 import { VideoSource } from "./video-source.ts";
 
+/** Structural subset shared by EffectDefinition (GPU) and RsEffectMeta (wasm). */
+type EffectInfo = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  params: readonly {
+    key: string;
+    label: string;
+    type: string;
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+  }[];
+};
+
+type Backend = "webgpu" | "rs";
+
+interface PreviewBackend {
+  readonly kind: Backend;
+  readonly catalog: readonly EffectInfo[];
+  defaults(id: string): ParamValues;
+  renderTo(canvas: HTMLCanvasElement, opts: {
+    effect: string;
+    params?: ParamValues;
+    time?: number;
+    videoTime?: number;
+    videoDuration?: number;
+    frame: { source: HTMLVideoElement };
+  }): Promise<void> | void;
+  dispose(): void;
+}
+
+class GpuBackend implements PreviewBackend {
+  readonly kind = "webgpu" as const;
+  constructor(readonly engine: EffectEngine, readonly catalog: readonly EffectInfo[]) {}
+  defaults(id: string): ParamValues {
+    return this.engine.defaults(id);
+  }
+  renderTo(canvas: HTMLCanvasElement, opts: Parameters<PreviewBackend["renderTo"]>[1]): Promise<void> {
+    return this.engine.renderTo(canvas, opts);
+  }
+  dispose(): void {
+    this.engine.dispose();
+  }
+}
+
+class RsBackend implements PreviewBackend {
+  readonly kind = "rs" as const;
+  constructor(readonly engine: RsEffectEngine, readonly catalog: readonly EffectInfo[]) {}
+  defaults(id: string): ParamValues {
+    return this.engine.defaults(id);
+  }
+  renderTo(canvas: HTMLCanvasElement, opts: Parameters<PreviewBackend["renderTo"]>[1]): Promise<void> {
+    return this.engine.renderTo(canvas, opts);
+  }
+  dispose(): void {
+    this.engine.dispose();
+  }
+}
+
 export async function startApp(): Promise<() => void> {
-  const canvas = required("#preview", HTMLCanvasElement);
+  const gpuCanvas = required("#preview", HTMLCanvasElement);
+  const cpuCanvas = required("#preview-cpu", HTMLCanvasElement);
+  const backendSelect = required("#backend-select", HTMLSelectElement);
   const list = required("#effect-list", HTMLElement);
   const paramList = required("#param-list", HTMLElement);
   const paramTitle = required("#param-title", HTMLElement);
@@ -20,21 +85,43 @@ export async function startApp(): Promise<() => void> {
   const sampleBtn = required("#sample-btn", HTMLButtonElement);
 
   const video = new VideoSource();
-  let engine: EffectEngine;
+
+  const backends = new Map<Backend, PreviewBackend>();
   try {
-    engine = await EffectEngine.create({
+    const gpu = await EffectEngine.create({
       onError: (error) => {
         status.textContent = error.message;
       },
     });
+    backends.set("webgpu", new GpuBackend(gpu, catalog));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    status.textContent = `启动失败：${message}`;
-    throw err;
+    status.textContent = `WebGPU 启动失败（${message}），回退 Rust CPU 后端`;
+    backendSelect.value = "rs";
   }
+  try {
+    const rs = await RsEffectEngine.create();
+    backends.set("rs", new RsBackend(rs, rs.catalog as unknown as EffectInfo[]));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    status.textContent = `wasm 引擎加载失败：${message}（先跑 npm run build:effect-rs:wasm）`;
+  }
+  if (backends.size === 0) throw new Error("没有可用渲染后端");
 
-  let effectId = catalog[0]?.id ?? "none";
-  let params: ParamValues = engine.defaults(effectId);
+  let backend: Backend =
+    (backendSelect.value === "rs" && backends.has("rs")) || !backends.has("webgpu") ? "rs" : "webgpu";
+  backendSelect.value = backend;
+  backendSelect.disabled = backends.size < 2;
+
+  const engine = (): PreviewBackend => backends.get(backend)!;
+  const showCanvas = (kind: Backend): void => {
+    gpuCanvas.style.display = kind === "webgpu" ? "block" : "none";
+    cpuCanvas.style.display = kind === "rs" ? "block" : "none";
+  };
+  showCanvas(backend);
+
+  let effectId = engine().catalog[0]?.id ?? "none";
+  let params: ParamValues = engine().defaults(effectId);
   let drawing = false;
   let queued = false;
   let fpsFrames = 0;
@@ -48,7 +135,7 @@ export async function startApp(): Promise<() => void> {
     if (!video.ready) return;
     drawing = true;
     try {
-      await engine.renderTo(canvas, {
+      await engine().renderTo(backend === "webgpu" ? gpuCanvas : cpuCanvas, {
         effect: effectId,
         params,
         time: video.currentTime,
@@ -77,22 +164,37 @@ export async function startApp(): Promise<() => void> {
 
   const select = (id: string) => {
     effectId = id;
-    params = engine.defaults(id);
-    const def = engine.getEffect(id);
-    renderList(list, catalog, def.id, select);
+    params = engine().defaults(id);
+    const def = engine().catalog.find((item) => item.id === id);
+    if (!def) return;
+    renderList(list, engine().catalog, def.id, select);
     renderParams(paramList, paramTitle, paramDesc, def, params, (key, value) => {
       params = { ...params, [key]: value };
       void draw();
     });
-    status.textContent = `特效：${def.name}`;
+    status.textContent = `特效：${def.name} · ${backend === "webgpu" ? "WebGPU" : "Rust CPU (wasm)"}`;
     void draw();
   };
 
   select(effectId);
-  status.textContent = "WebGPU 就绪，选择视频后开始预览";
+  status.textContent =
+    backend === "webgpu" ? "WebGPU 就绪，选择视频后开始预览" : "Rust CPU (wasm) 就绪，选择视频后开始预览";
   new ResizeObserver(() => {
     void draw();
-  }).observe(canvas);
+  }).observe(gpuCanvas);
+
+  backendSelect.addEventListener("change", () => {
+    const next = backendSelect.value as Backend;
+    if (!backends.has(next)) {
+      backendSelect.value = backend;
+      return;
+    }
+    backend = next;
+    showCanvas(backend);
+    const first = engine().catalog[0]?.id ?? "none";
+    select(first);
+    status.textContent = `后端：${backend === "webgpu" ? "WebGPU" : "Rust CPU (wasm)"}（${engine().catalog.length} 个特效）`;
+  });
 
   let attachGen = 0;
   const attachFile = async (file: File) => {
@@ -151,13 +253,13 @@ export async function startApp(): Promise<() => void> {
 
   return () => {
     video.dispose();
-    engine.dispose();
+    for (const b of backends.values()) b.dispose();
   };
 }
 
 function renderList(
   root: HTMLElement,
-  effects: readonly EffectDefinition[],
+  effects: readonly EffectInfo[],
   activeId: string,
   onPick: (id: string) => void,
 ): void {
@@ -176,7 +278,7 @@ function renderParams(
   root: HTMLElement,
   title: HTMLElement,
   desc: HTMLElement,
-  effect: EffectDefinition,
+  effect: EffectInfo,
   values: ParamValues,
   onChange: (key: string, value: number) => void,
 ): void {
@@ -219,3 +321,6 @@ function required<T extends Element>(selector: string, ctor: new () => T): T {
   if (!(el instanceof ctor)) throw new Error(`Missing ${selector}`);
   return el;
 }
+
+// keep the effect-core import referenced for the GPU catalog type-check
+export type { EffectDefinition, ParamValues };

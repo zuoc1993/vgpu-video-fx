@@ -1,0 +1,30 @@
+[package]
+name = "effect-rs"
+version = "0.1.0"
+edition = "2021"
+description = "CPU video effect engine: frei0r-style effects in Rust with wasm/python bindings"
+license = "GPL-2.0-only"
+
+[lib]
+name = "effect_rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["rayon"]
+python = ["dep:pyo3"]
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rayon = { version = "1", optional = true }
+pyo3 = { version = "0.23", optional = true, features = ["extension-module", "abi3-py310"] }
+wasm-bindgen = { version = "0.2", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+# Tip: RUSTFLAGS="-C target-cpu=native" enables the host's full vector ISA for
+# the python/native build; wasm can opt into simd128 via
+# RUSTFLAGS="-C target-feature=+simd128" on wasm-pack build.

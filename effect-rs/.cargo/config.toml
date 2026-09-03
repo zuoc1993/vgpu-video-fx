@@ -1,0 +1,4 @@
+# wasm-only flags: SIMD128 for the wasm preview build. Native (python)
+# builds are unaffected; host builds of wasm-bindgen CLI likewise.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

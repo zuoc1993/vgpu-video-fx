@@ -14,6 +14,13 @@
           <input id="video-input" type="file" accept="video/*" />
         </label>
         <button id="sample-btn" type="button">加载示例</button>
+        <label class="backend-label" title="渲染后端">
+          后端
+          <select id="backend-select">
+            <option value="webgpu">WebGPU</option>
+            <option value="rs">Rust CPU (wasm)</option>
+          </select>
+        </label>
         <div id="video-meta" class="meta">未选择视频</div>
         <div class="spacer"></div>
         <button id="play-btn" type="button" disabled>播放</button>
@@ -26,6 +33,7 @@
         <section class="preview-panel">
           <div class="stage">
             <canvas id="preview"></canvas>
+            <canvas id="preview-cpu"></canvas>
             <div id="fps" class="fps">– fps</div>
             <div id="status" class="status">正在初始化 WebGPU…</div>
           </div>
