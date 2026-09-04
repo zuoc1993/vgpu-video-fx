@@ -1,6 +1,6 @@
 # 使用指南
 
-两条用法：**浏览器预览**（实时）和 **BMF 出片**（sidecar + 解码编码）。特效 id 两边相同。
+两条用法：**浏览器预览**（实时）和 **BMF 出片**（解码 → 特效 → 编码）。特效 id 两边相同。出片有三个后端：`wgpu`（进程内 GPU，推荐，无需 sidecar）、`socket`（Node sidecar + Dawn）、`native`（effect_rs CPU，仅 5 个特效）。
 
 ## 环境
 
@@ -51,9 +51,32 @@ npm run preview
 
 ## 离线出片
 
-先起 GPU worker，再跑 BMF。
+### 选后端
 
-### 1. Sidecar
+| backend | 依赖 | 特效覆盖 | 什么时候用 |
+|---|---|---|---|
+| `wgpu`（推荐） | `uv sync --group wgpu` + 已入库的 `dist-effects/` | 全量 38 个 | 默认；不起 sidecar，最快 |
+| `socket` | `npm run sidecar`（Dawn） | 全量 38 个 | 需要和浏览器/Dawn 逐像素对齐验证时 |
+| `native` | effect_rs 本地 wheel | 已移植的 5 个 | 无 GPU 环境兜底 |
+
+不指定时 `run_demo.py` 自动选：装了 effect_rs 用 `native`，否则 `socket`；模块内 `pick_backend` 还会在请求后端不可用时按 wgpu→native→socket 回退。
+
+### 1a. wgpu 后端（不起 sidecar）
+
+```sh
+npm run export:effects        # 产物已入库；只有改过 shader 才需要重跑
+cd bmf-demo
+uv sync --group wgpu          # 装 wgpu-py（≥0.20）
+VGPU_FX_BACKEND=wgpu uv run run_demo.py
+```
+
+免 BMF 冒烟（合成帧直接过 GPU）：
+
+```sh
+uv run vgpu_fx_gpu.py posterize 4
+```
+
+### 1b. socket 后端（先起 sidecar）
 
 ```sh
 npm run sidecar
@@ -86,28 +109,31 @@ cd bmf-demo
 uv sync
 ```
 
-`uv.lock` 会装 `babitmf` + `numpy`（group `bmf`）。
+`uv.lock` 会装 `babitmf` + `numpy`（group `bmf`）。wgpu 后端加 `--group wgpu`；native 后端装本地 wheel：`uv pip install ../effect-rs/target/wheels/effect_rs-*.whl`（注意：`uv sync` 会清掉不属于任何依赖组的 wheel，装完 wgpu 组后若要用 native 需重装一次）。
 
-### 3. 跑 8 个特效
+### 3. 跑出片
 
-在**另一个终端**（sidecar 保持开着）：
+在**另一个终端**（socket 后端时 sidecar 保持开着；wgpu/native 不需要）：
 
 ```sh
 cd bmf-demo
-uv run run_demo.py
+VGPU_FX_BACKEND=wgpu uv run run_demo.py     # 全量 38 个
 ```
 
 输入固定为仓库根下 `public/sample.mp4`。  
 输出：`bmf-demo/output/{effect}.mp4`（gitignore）。
 
-控制台会打 sidecar 耗时和 fps，以及 wall time。
+控制台每行是 `vgpu_fx[{backend}] {effect}: ... fps` 和 wall time。
 
 环境变量：
 
 | 变量 | 默认 | 作用 |
 |---|---|---|
-| `VGPU_FX_SOCK` | `/tmp/vgpu-fx.sock` | 和 sidecar 同一条 socket |
-| `VGPU_FX_BATCH` | `15` | 一次 socket 送几帧（同特效、同分辨率） |
+| `VGPU_FX_BACKEND` | auto | `wgpu` / `socket` / `native` |
+| `VGPU_FX_SOCK` | `/tmp/vgpu-fx.sock` | 和 sidecar 同一条 socket（仅 socket 后端） |
+| `VGPU_FX_BATCH` | `15` | 一次渲染几帧（同特效、同分辨率） |
+| `VGPU_FX_EFFECTS` | 全部 | 逗号分隔，缩小特效范围 |
+| `VGPU_FX_LIST_ONLY` | 关 | 置 `1` 只打印计划渲染的特效，不出片 |
 
 只验协议、不跑 BMF：
 
@@ -121,7 +147,7 @@ uv run python test_client.py
 
 ### 4. 自己的片子 / 单个特效
 
-`run_demo.py` 里写死了 sample 和 8 个 id。换输入或只出某一个，改 `inp` / `EFFECTS`，或在自己的 BMF 图里挂模块：
+`run_demo.py` 里写死了 sample 和 catalog 的 38 个 id。换输入或只出某一个，改 `inp` / `EFFECTS`（或用 `VGPU_FX_EFFECTS=a,b,c`），或在自己的 BMF 图里挂模块：
 
 ```python
 option = {
@@ -159,9 +185,15 @@ zoom 的 `loop`：`1` 循环，`0` 播完停在 `endScale`。出片请传 `video
 
 ## 出片速度
 
-sidecar 路径每帧都要 CPU→GPU→CPU，再加 socket。1080p RGBA 约 7MB/帧，常见大约数 fps，`none` 也差不多——瓶颈是搬运，不是特效。Web 预览没有读回，所以快。
+出片每帧都要 CPU→GPU→CPU（1080p RGBA 约 7MB/帧），瓶颈是搬运，不是特效——`none` 也差不多。实测（Apple M3 Max，1664×1080，109 帧/特效）：
 
-加大 `VGPU_FX_BATCH` 只能少几次往返，总流量不变。
+| backend | render fps | 单特效 wall |
+|---|---|---|
+| `wgpu` | ≈ 250–340 | ≈ 2.2s |
+| `socket` | ≈ 70–85（socket 拷贝占大头） | ≈ 3.2s |
+| `native` | 44–524（CPU，因特效而异） | 2.2–4.3s |
+
+wgpu 进程内省掉 socket 和第二进程，是目前最快的出片路径。加大 `VGPU_FX_BATCH` 只能少几次往返，总流量不变。Web 预览没有读回，所以快。
 
 ## 故障排除
 
@@ -187,7 +219,19 @@ BMF 挂载写错了，必须用 `video.py_module("vgpu_fx", option, HERE, "vgpu_
 空音频 pad + 无音视频。无音轨用 `encode(None, ...)`。
 
 **改了特效出片没变**  
-sidecar 没重启。
+socket 后端：sidecar 没重启。wgpu 后端：改了 WGSL 没重跑 `npm run export:effects`。
+
+**wgpu 后端报 missing effects.json**  
+先 `npm run export:effects` 生成 `packages/effect-core/dist-effects/`（正常已入库，clone 后即存在）。
+
+**wgpu 后端拿不到 adapter**  
+Linux 无 GPU 环境装 lavapipe（`apt install mesa-vulkan-drivers`）；macOS 不会出现。
+
+**升级 wgpu-py 后渲染报错**  
+API 可能漂移（如 0.32 的读回路径）。按 [验证手册](./wgpu-py-validation.md) 重跑 Step 3/4 验收。
+
+**想逐像素对比 Dawn 和 wgpu 的结果**  
+sidecar 开着，跑 `cd bmf-demo && uv run compare_wgpu.py`（38 特效全表，阈值见验证手册）。
 
 **zoom 不动画**  
 没传 `videoDuration`，或 `times` 全是 0。

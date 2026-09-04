@@ -6,6 +6,7 @@
 
 - npm workspaces，源码 TypeScript 直接给 Vite / sidecar 的 loader 用，不先编一摊 dist。
 - 特效 **id、时钟名、已有 WGSL 公式** 是契约：Web、sidecar、`bmf-demo/run_demo.py` 的 `EFFECTS` 必须对得上。
+- 改任何 shader（含 `shared/`、`@vgpu/wgsl-std` 使用方式）后必须 `npm run export:effects` 并把 `dist-effects/` 的 diff 一起提交——wgpu 后端吃的就是这份产物。
 - 不要「顺手」改已有 catalog 的 shader / 默认参数，除非任务就是改观感。
 - 最短能跑的改动优先。非平凡逻辑留一个最小自检（现有 `scripts/` 或补一条 smoke）。
 
@@ -37,6 +38,7 @@ npm run typecheck
 3. 能复用的纯函数放 `effects/shared/video.wgsl`，用 `import { ... } from "..."`
 4. `scripts/smoke.mjs` 的 `cases` 补上该 id 的一组 params
 5. `bmf-demo/run_demo.py` 的 `EFFECTS` 同步（要出片的话）
+6. `npm run export:effects` 导出并提交 `dist-effects/`（wgpu 后端）；若导出器报 `cannot auto-map uniform field`，说明 `uniforms()` 写了它不认的条件逻辑——按报错改 `uniforms()` 或扩展导出器，**不要绕过**
 
 `index.ts` 骨架：
 
@@ -107,6 +109,14 @@ Node 里创建 engine：先注册 `packages/sidecar/src/wgsl-loader.mjs`，或�
 - 协议改字段：同时改 `packages/sidecar/src/protocol.ts` 和 `bmf-demo/vgpu_fx_protocol.py`，并更新 `smoke-sidecar`。
 - 像素：RGBA8、紧凑、顶原点、`width*height*4`。BMF 侧 RGB→补 A、回来再剥 A。
 
+## wgpu 后端（bmf-demo/vgpu_fx_gpu.py）
+
+- 产物权威：Python 侧**不解析 WGSL**；uniform 布局读 `dist-effects/effects.json`（vgpu 反射），shader 字符串与 sidecar 逐字节一致。改 shader = 重跑导出器 + 提交产物 diff。
+- 读回：staging buffer 是 `MAP_READ | COPY_DST`，用 `buf.map_sync(READ)` + `read_mapped()` 原地映射。**不要**改用 `queue.read_buffer`——wgpu-py ≥0.32 里它内部做 buffer→buffer 拷贝，要求 `COPY_SRC`，而 MAP_READ buffer 禁止该用法，必报 validation error。
+- wgpu-py 无类型兜底，API 会漂移：升级 `wgpu` 后按 [验证手册](./wgpu-py-validation.md) 重跑 Step 3（冒烟）+ Step 4（`compare_wgpu.py` 对照 Dawn）。手册允许在保持语义的前提下适配 API，改动要记录。
+- 一致性门禁：`none` 必须 mean=0/max=0；其余 mean < 0.05 且 pct>2 < 1%；个别 ±1 LSB 是 tint/naga 浮点指令差异，可接受。
+- 冒烟不依赖 BMF/sidecar：`uv run vgpu_fx_gpu.py {effect} {frames}`（合成帧）。
+
 ## BMF 模块
 
 - 挂载：`video.py_module("vgpu_fx", option, HERE, "vgpu_fx.VgpuFx")`。`HERE` 是包含 `vgpu_fx.py` 的目录。
@@ -133,13 +143,15 @@ packages/effect-core/src/
   effects/shared/video.wgsl
 packages/web/src/{main,app,video-source,video-wait}.ts
 packages/sidecar/src/{start.mjs,wgsl-loader.mjs,server.ts,protocol.ts,read.ts}
-bmf-demo/{vgpu_fx.py,vgpu_fx_protocol.py,run_demo.py,test_client.py}
+packages/effect-core/dist-effects/   # 导出产物（入库）：{id}.wgsl + effects.json
+bmf-demo/{vgpu_fx.py,vgpu_fx_protocol.py,vgpu_fx_gpu.py,compare_wgpu.py,run_demo.py,test_client.py}
 scripts/{check-shaders,smoke,smoke-sidecar,check-frames,check-video-wait,e2e-preview}.mjs
+scripts/{export-effects.mjs,wgsl-export-loader.mjs}   # wgpu 后端导出器
 ```
 
 ## 已知限制（改之前先看）
 
-1. 出片路径是 CPU↔GPU 往返，batch / 多 pass 一次 submit **解决不了** 1080p 实时导出。
+1. 出片路径是 CPU↔GPU 往返，batch / 多 pass 一次 submit **解决不了** 1080p 实时导出。wgpu 进程内后端省掉 socket/进程边界（实测 wall 2.2s vs socket 3.2s），但搬运本身仍在。
 2. shader 是 `texture_2d`，不是数组，无法一条 draw 吃 N 帧。
 3. 调用方选每段时间的 effect id；引擎不做时间轴编排。
 4. 预览和出片若要像素级一致：同一 id、同一 params、同一 `time`/`videoTime`；预览画布比例若和视频不同，contain 的黑边会不同。出片输出尺寸 = 输入帧尺寸。
@@ -148,6 +160,6 @@ scripts/{check-shaders,smoke,smoke-sidecar,check-frames,check-video-wait,e2e-pre
 
 按需，不是路线图承诺：
 
-- 出片要快：进程内渲染或 CPU 实现简单特效，或结果不读回、直接硬编——见架构性能节。
+- 出片要快：~~进程内渲染~~（wgpu 后端已做）；再往下是结果不读回、直接硬编——见架构性能节。
 - 时间轴多特效：在 BMF/Web 按 pts 切 id，不必改 engine。
 - 新特效：只加目录 + registry + smoke cases，保持现有 WGSL 不动。
