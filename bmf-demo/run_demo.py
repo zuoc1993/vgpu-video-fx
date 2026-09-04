@@ -124,7 +124,7 @@ def run_one(bmf, inp: str, effect: str, duration: float, sock: str, batch: int, 
 
 def resolve_backend() -> str:
     backend = os.environ.get("VGPU_FX_BACKEND", "")
-    if backend not in ("native", "socket"):
+    if backend not in ("native", "socket", "wgpu"):
         try:
             import effect_rs  # noqa: F401
             backend = "native"
@@ -134,12 +134,19 @@ def resolve_backend() -> str:
 
 
 def plan_effects(backend: str) -> list[str]:
-    """native → effects available in effect-rs; socket → the full TS catalog."""
+    """native → effect_rs subset; wgpu → exported WGSL catalog; socket → full TS catalog."""
     if backend == "native":
         try:
             import effect_rs
             available = {e["id"] for e in effect_rs.catalog()}
         except ImportError:
+            available = set()
+        targets = [e for e in EFFECTS if e in available]
+    elif backend == "wgpu":
+        try:
+            from vgpu_fx_gpu import WgpuFxRenderer
+            available = set(WgpuFxRenderer.catalog_ids())
+        except Exception:
             available = set()
         targets = [e for e in EFFECTS if e in available]
     else:

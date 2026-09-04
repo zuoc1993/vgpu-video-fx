@@ -1,4 +1,11 @@
-"""BMF module: send each video frame to the vgpu-fx sidecar and emit the result."""
+"""BMF module: render frames through the vgpu-fx catalog and emit the result.
+
+Backends (option "backend" or VGPU_FX_BACKEND):
+  - "native": effect_rs CPU (PyO3), no sidecar
+  - "wgpu":   wgpu-py GPU in this process, runs the exported WGSL
+              (`npm run export:effects` first), no sidecar
+  - "socket": Node sidecar with Dawn over a unix socket
+"""
 
 from __future__ import annotations
 
@@ -18,6 +25,35 @@ except ImportError:
     NATIVE_AVAILABLE = False
 
 try:
+    from vgpu_fx_gpu import WgpuFxRenderer
+
+    WGPU_AVAILABLE = WgpuFxRenderer.available()
+except Exception:  # wgpu-py missing, or artifacts not exported yet
+    WgpuFxRenderer = None  # type: ignore[assignment]
+    WGPU_AVAILABLE = False
+
+
+def pick_backend(requested: str) -> str:
+    """Resolve backend with availability fallback. "wgpu" = in-process GPU via
+    wgpu-py (no sidecar); "native" = effect_rs CPU; "socket" = Node sidecar."""
+    if requested == "wgpu":
+        if WGPU_AVAILABLE:
+            return "wgpu"
+        return "native" if NATIVE_AVAILABLE else "socket"
+    if requested == "native":
+        if NATIVE_AVAILABLE:
+            return "native"
+        return "wgpu" if WGPU_AVAILABLE else "socket"
+    if requested == "socket":
+        return "socket"
+    # auto: in-process backends first, sidecar last
+    if NATIVE_AVAILABLE:
+        return "native"
+    if WGPU_AVAILABLE:
+        return "wgpu"
+    return "socket"
+
+try:
     from bmf import Log, LogLevel, Module, Packet, ProcessResult, Timestamp, VideoFrame
     import bmf.hmp as mp
 except ImportError:  # pragma: no cover
@@ -31,15 +67,12 @@ class VgpuFx(Module):
         self.effect = str(option.get("effect") or "none")
         self.params = option.get("params") or {}
         backend = str(option.get("backend") or os.environ.get("VGPU_FX_BACKEND") or "")
-        if backend not in ("native", "socket"):
-            backend = "native" if NATIVE_AVAILABLE else "socket"
-        if backend == "native" and not NATIVE_AVAILABLE:
-            backend = "socket"
-        self.backend = backend
+        self.backend = pick_backend(backend)
         self.socket_path = str(option.get("socket") or os.environ.get("VGPU_FX_SOCK") or DEFAULT_SOCK)
         self.video_duration = float(option.get("videoDuration") or 0)
         self.batch = max(1, int(option.get("batch") or 15))
         self.client: VgpuFxClient | None = None
+        self.renderer = None
         self.pending: list[tuple[object, object, np.ndarray, float]] = []
         self.frames = 0
         self.batches = 0
@@ -51,6 +84,8 @@ class VgpuFx(Module):
     def init(self):
         if self.backend == "socket" and self.client is None:
             self.client = VgpuFxClient(self.socket_path)
+        if self.backend == "wgpu" and self.renderer is None:
+            self.renderer = WgpuFxRenderer()
 
     def close(self):
         self._report()
@@ -94,6 +129,16 @@ class VgpuFx(Module):
         t0 = time.perf_counter()
         if self.backend == "native":
             out = effect_rs.render_batch(  # type: ignore[union-attr]
+                self.effect,
+                width,
+                height,
+                pixels,
+                times,
+                params=dict(self.params),
+                video_duration=self.video_duration,
+            )
+        elif self.backend == "wgpu":
+            out = self.renderer.render_batch(
                 self.effect,
                 width,
                 height,

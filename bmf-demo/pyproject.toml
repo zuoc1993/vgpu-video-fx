@@ -10,6 +10,10 @@ bmf = [
     "babitmf>=0.2.0",
     "numpy>=1.19.5",
 ]
+# In-process GPU backend (bmf-demo/vgpu_fx_gpu.py): uv sync --group wgpu
+wgpu = [
+    "wgpu>=0.20",
+]
 
 [tool.uv]
 package = false

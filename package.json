@@ -14,6 +14,7 @@
     "smoke": "node scripts/smoke.mjs",
     "check:video-wait": "node scripts/check-video-wait.mjs",
     "check:frames": "node scripts/check-frames.mjs",
+    "export:effects": "node scripts/export-effects.mjs",
     "typecheck": "tsc -p packages/effect-core && tsc -p packages/web",
     "sidecar": "npm run start -w @vgpu-fx/sidecar",
     "build:effect-rs:wasm": "wasm-pack build effect-rs --release --target web --out-dir pkg -- --no-default-features --features wasm",
