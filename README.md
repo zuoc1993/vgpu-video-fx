@@ -36,4 +36,4 @@ npm test
 
 ## 特效
 
-`none` · `handheld-cam` · `camera-shake` · `local-push` · `glitch` · `screen-shake` · `zoom-in` · `zoom-out` · `cylinder-wrap` · `pixeliz0r` · `squigglevision` · `colorhalftone` · `sobel` · `water` · `defish0r` · `vignette` · `heatmap0r` · `glitch0r` · `pixels0rt` · `kaleid0sc0pe` · `distort0r` · `rgbsplit0r` · `emboss` · `posterize` · `pixs0r` · `dither` · `ntsc` · `edgeglow` · `scanline0r` · `glow` · `crt` · `spectral-flare` · `dust-bokeh` · `spacetime-lens` · `retro-quantize` · `grade` · `light-leak` · `dissolve`
+`none` · `handheld-cam` · `camera-shake` · `local-push` · `glitch` · `screen-shake` · `zoom-in` · `zoom-out` · `cylinder-wrap` · `pixeliz0r` · `squigglevision` · `colorhalftone` · `sobel` · `water` · `defish0r` · `vignette` · `heatmap0r` · `glitch0r` · `pixels0rt` · `kaleid0sc0pe` · `distort0r` · `rgbsplit0r` · `emboss` · `posterize` · `pixs0r` · `dither` · `ntsc` · `edgeglow` · `scanline0r` · `glow` · `crt` · `spectral-flare` · `dust-bokeh` · `spacetime-lens` · `retro-quantize` · `grade` · `light-leak` · `dissolve` · `curtain-wind`

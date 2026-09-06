@@ -47,6 +47,7 @@ const cases = {
   grade: { lift: 0.05, gamma: 0.85, gain: 1.05, saturation: 1.15 },
   "light-leak": { intensity: 0.7, size: 0.9, speed: 0.6 },
   dissolve: { speed: 0.5, scale: 5, edgeGlow: 0.8, invert: 0 },
+  "curtain-wind": { strength: 0.6, folds: 3.5, speed: 1, gust: 0.7, sway: 0.5, bleed: 0.6 },
 };
 
 const ids = readdirSync(effectsDir, { withFileTypes: true })

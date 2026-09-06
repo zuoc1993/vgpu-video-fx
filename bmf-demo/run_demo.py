@@ -69,6 +69,7 @@ EFFECTS = (
     "grade",
     "light-leak",
     "dissolve",
+    "curtain-wind",
 )
 
 

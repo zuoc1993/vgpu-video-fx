@@ -2,6 +2,7 @@ import type { EffectDefinition } from "./types.ts";
 import { cameraShakeEffect } from "./camera-shake/index.ts";
 import { colorhalftoneEffect } from "./colorhalftone/index.ts";
 import { crtEffect } from "./crt/index.ts";
+import { curtainWindEffect } from "./curtain-wind/index.ts";
 import { cylinderWrapEffect } from "./cylinder-wrap/index.ts";
 import { defish0rEffect } from "./defish0r/index.ts";
 import { dissolveEffect } from "./dissolve/index.ts";
@@ -78,6 +79,7 @@ export const catalog: readonly EffectDefinition[] = [
   gradeEffect,
   lightLeakEffect,
   dissolveEffect,
+  curtainWindEffect,
 ];
 
 export function getEffect(id: string): EffectDefinition | undefined {
