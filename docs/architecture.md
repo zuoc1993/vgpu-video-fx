@@ -2,7 +2,7 @@
 
 本仓库是一套 **WebGPU 视频特效**：同一份 WGSL catalog（38 个特效），两条预览/出片出路——浏览器实时预览，以及 BMF 离线出片。出片有三个可互换的后端：**wgpu**（Python 进程内 wgpu-py 跑导出产物，推荐）、**socket**（RGBA 帧发给 Node sidecar，Dawn 渲染）、**native**（effect_rs Rust/CPU，仅 5 个移植特效）。设计与验收见 [wgpu-py 后端](./wgpu-py-backend.md) / [验证手册](./wgpu-py-validation.md)。
 
-仓库名 `vgpu-video-fx`。渲染库是 [vgpu](https://vgpu.sh) `^0.3.1`。
+仓库名 `vgpu-video-fx`。渲染库是 [vgpu](https://vgpu.sh) `^0.4.0`。
 
 ## 总览
 
