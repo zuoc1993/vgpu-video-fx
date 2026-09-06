@@ -27,7 +27,7 @@ package.json                      # 已加 export:effects 脚本
 ## Step 0 · 环境就绪
 
 ```bash
-cd /Users/zuoc/Documents/vscode/vgpu
+cd /Users/zuoc/Documents/vscode/vgpu-video-fx
 node --version          # 需要 >= 22.6（TS type stripping）
 uv --version
 git status --short      # 应看到上面的新文件；删掉残留：rm -f .write-test-editor
@@ -118,7 +118,7 @@ uv run vgpu_fx_gpu.py glow 4            # 9-tap 重采样
 # 终端 A（另一个会话/窗口，仓库根目录）：
 npm run sidecar
 # 终端 B：
-cd /Users/zuoc/Documents/vscode/vgpu && npm run smoke:sidecar   # 先确认 sidecar 健康
+cd /Users/zuoc/Documents/vscode/vgpu-video-fx && npm run smoke:sidecar   # 先确认 sidecar 健康
 cd bmf-demo && uv run compare_wgpu.py
 ```
 
@@ -169,7 +169,7 @@ cd bmf-demo && VGPU_FX_BACKEND=native uv run run_demo.py    # 若装了 effect_r
 ## Step 7 · 收尾
 
 ```bash
-cd /Users/zuoc/Documents/vscode/vgpu
+cd /Users/zuoc/Documents/vscode/vgpu-video-fx
 git add packages/effect-core/dist-effects/ scripts/export-effects.mjs scripts/wgsl-export-loader.mjs \
         bmf-demo/vgpu_fx_gpu.py bmf-demo/compare_wgpu.py bmf-demo/vgpu_fx.py bmf-demo/run_demo.py \
         bmf-demo/pyproject.toml docs/wgpu-py-backend.md package.json

@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/water/effect.wgsl
-struct _vgsl_e1236b49__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/water/effect.wgsl
+struct _vgsl_928d6a2d__Params {
   time: f32,
   amp: f32,
   freq: f32,
@@ -24,11 +24,11 @@ struct _vgsl_e1236b49__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_e1236b49__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_928d6a2d__Params;
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
@@ -44,13 +44,13 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let c = cos(a);
   let s = sin(a);
   let q = vec2f(p.x * c - p.y * s, p.x * s + p.y * c);
-  return _vgsl_35d1d59a__sampleVideo(src, samp, v + d * params.amp + (q - p));
+  return _vgsl_17688d6e__sampleVideo(src, samp, v + d * params.amp + (q - p));
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -64,17 +64,17 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
-fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+ fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+ 
 
+ 
 
+ 
 
-
-
-
-
+ 

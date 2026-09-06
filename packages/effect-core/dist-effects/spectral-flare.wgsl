@@ -11,12 +11,12 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/spectral-flare/effect.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/spectral-flare/effect.wgsl
 // Spectral ghost flare, ported from charbelmalo/PrismaticShadersPack (MIT).
 // https://github.com/charbelmalo/PrismaticShadersPack
      
 
-struct _vgsl_a996f039__Params {
+struct _vgsl_9244c219__Params {
   time: f32,
   threshold: f32,
   strength: f32,
@@ -28,14 +28,14 @@ struct _vgsl_a996f039__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_a996f039__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_9244c219__Params;
 
-fn _vgsl_a996f039__sampleVideoW(u: vec2f) -> vec3f {
+fn _vgsl_9244c219__sampleVideoW(u: vec2f) -> vec3f {
   return textureSampleLevel(src, samp, vec2f(fract(u.x), clamp(u.y, 0.0, 1.0)), 0.0).rgb;
 }
 
 // Simplified Planckian locus approximation: 380-780nm -> RGB.
-fn _vgsl_a996f039__wavelengthToRgb(wl: f32) -> vec3f {
+fn _vgsl_9244c219__wavelengthToRgb(wl: f32) -> vec3f {
   var c = vec3f(0.0);
   if (wl < 440.0) {
     c = vec3f(-(wl - 440.0) / 60.0, 0.0, 1.0);
@@ -61,11 +61,11 @@ fn _vgsl_a996f039__wavelengthToRgb(wl: f32) -> vec3f {
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let color = _vgsl_a996f039__sampleVideoW(v);
+  let color = _vgsl_9244c219__sampleVideoW(v);
   let center = vec2f(0.5);
   let dir = v - center;
   let dist = length(dir);
@@ -80,30 +80,30 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     let offsetScale = (0.02 + 0.08 * t) * dist * mix(1.0, params.size * 10.0, 0.5);
     let ghost1 = center + dir * 1.5 + dir * offsetScale;
     let ghost2 = center + dir * 0.7 - dir * offsetScale * 0.5;
-    let rgb = _vgsl_a996f039__wavelengthToRgb(380.0 + t * 400.0);
-    flare += _vgsl_a996f039__sampleVideoW(ghost1) * rgb * mask * 0.4;
-    flare += _vgsl_a996f039__sampleVideoW(ghost2) * rgb * mask * 0.25;
+    let rgb = _vgsl_9244c219__wavelengthToRgb(380.0 + t * 400.0);
+    flare += _vgsl_9244c219__sampleVideoW(ghost1) * rgb * mask * 0.4;
+    flare += _vgsl_9244c219__sampleVideoW(ghost2) * rgb * mask * 0.25;
   }
 
   // Broad halo around bright regions.
   let haloWidth = 0.03;
-  let haloColor = (_vgsl_a996f039__sampleVideoW(v + dir * haloWidth) + _vgsl_a996f039__sampleVideoW(v - dir * haloWidth)) * 0.5;
+  let haloColor = (_vgsl_9244c219__sampleVideoW(v + dir * haloWidth) + _vgsl_9244c219__sampleVideoW(v - dir * haloWidth)) * 0.5;
   let haloMask = smoothstep(params.threshold * 0.3, params.threshold, lum);
   flare += haloColor * haloMask * 0.2 * params.halo;
 
   // Rainbow fringing on highlights.
   let caOffset = dir * params.size * 0.003 * dist;
   var caColor = color;
-  caColor.r = _vgsl_a996f039__sampleVideoW(v + caOffset).r;
-  caColor.b = _vgsl_a996f039__sampleVideoW(v - caOffset).b;
+  caColor.r = _vgsl_9244c219__sampleVideoW(v + caOffset).r;
+  caColor.b = _vgsl_9244c219__sampleVideoW(v - caOffset).b;
 
   return vec4f(min(caColor + flare, vec3f(2.0)), 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -117,12 +117,12 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-
+ 

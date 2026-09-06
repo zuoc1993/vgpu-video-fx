@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/distort0r/effect.wgsl
-struct _vgsl_55925c05__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/distort0r/effect.wgsl
+struct _vgsl_9ada0ecc__Params {
   time: f32,
   amplitude: f32,
   freq: f32,
@@ -24,28 +24,28 @@ struct _vgsl_55925c05__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_55925c05__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_9ada0ecc__Params;
 
 // perlin2d sigma ~0.3; remap to [-1, 1] here.
-fn _vgsl_55925c05__np(p: vec2f) -> vec2f {
-  return vec2f(_vgsl_bbb85e49__perlin2d(p), _vgsl_bbb85e49__perlin2d(p + vec2f(57.3, 21.7))) * 3.3;
+fn _vgsl_9ada0ecc__np(p: vec2f) -> vec2f {
+  return vec2f(_vgsl_4bd4d50c__perlin2d(p), _vgsl_4bd4d50c__perlin2d(p + vec2f(57.3, 21.7))) * 3.3;
 }
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let t = params.time * params.speed;
-  let n = _vgsl_55925c05__np(v * params.freq + vec2f(t * params.velocity * 0.7, t));
-  return _vgsl_35d1d59a__sampleVideo(src, samp, v + n * params.amplitude * 0.08);
+  let n = _vgsl_9ada0ecc__np(v * params.freq + vec2f(t * params.velocity * 0.7, t));
+  return _vgsl_17688d6e__sampleVideo(src, samp, v + n * params.amplitude * 0.08);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -59,22 +59,22 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
-fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+ fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/node_modules/@vgpu/wgsl-std/src/noise/perlin/index.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/node_modules/@vgpu/wgsl-std/src/noise/perlin/index.wgsl
 // Improved Perlin noise (Perlin 2002: quintic fade + cube-edge gradient set) in 2D/3D, plus the
 // amplitude-normalized FBM that wraps each one.
 //
@@ -101,26 +101,26 @@ fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -
 
 // 1 / 0.7071067812 = 1.41421356..., truncated *downward* so the range stays strictly inside
 // (-1, 1): max |perlin2d| = 0.99996.
-const _vgsl_bbb85e49__perlinNormalize2: f32 = 1.4142;
+const _vgsl_4bd4d50c__perlinNormalize2: f32 = 1.4142;
 // 1 / 1.0363538112 = 0.96491..., with ~1% margin against residual error in the numeric sup search:
 // max |perlin3d| = 0.99956.
 
 
-fn _vgsl_bbb85e49__perlin2d(position: vec2f) -> f32 {
+ fn _vgsl_4bd4d50c__perlin2d(position: vec2f) -> f32 {
   let base = floor(position);
   // vec2i(floor(p)) -- never vec2i(p): truncation toward zero would collapse the cells on both
   // sides of the origin into one, which is a visible seam for negative coordinates.
   let cell = vec2i(base);
   let f = position - base;
-  let u = _vgsl_a03dd8cd__noiseFade2(f);
-  let d00 = _vgsl_a03dd8cd__gradDot2(_vgsl_a03dd8cd__gradIndex2(cell), f);
-  let d10 = _vgsl_a03dd8cd__gradDot2(_vgsl_a03dd8cd__gradIndex2(cell + vec2i(1, 0)), f - vec2f(1.0, 0.0));
-  let d01 = _vgsl_a03dd8cd__gradDot2(_vgsl_a03dd8cd__gradIndex2(cell + vec2i(0, 1)), f - vec2f(0.0, 1.0));
-  let d11 = _vgsl_a03dd8cd__gradDot2(_vgsl_a03dd8cd__gradIndex2(cell + vec2i(1, 1)), f - vec2f(1.0, 1.0));
-  return _vgsl_bbb85e49__perlinNormalize2 * mix(mix(d00, d10, u.x), mix(d01, d11, u.x), u.y);
+  let u = _vgsl_8599ae8e__noiseFade2(f);
+  let d00 = _vgsl_8599ae8e__gradDot2(_vgsl_8599ae8e__gradIndex2(cell), f);
+  let d10 = _vgsl_8599ae8e__gradDot2(_vgsl_8599ae8e__gradIndex2(cell + vec2i(1, 0)), f - vec2f(1.0, 0.0));
+  let d01 = _vgsl_8599ae8e__gradDot2(_vgsl_8599ae8e__gradIndex2(cell + vec2i(0, 1)), f - vec2f(0.0, 1.0));
+  let d11 = _vgsl_8599ae8e__gradDot2(_vgsl_8599ae8e__gradIndex2(cell + vec2i(1, 1)), f - vec2f(1.0, 1.0));
+  return _vgsl_4bd4d50c__perlinNormalize2 * mix(mix(d00, d10, u.x), mix(d01, d11, u.x), u.y);
 }
 
-
+ 
 
 // Fractal Brownian motion, amplitude-normalized: `sum / weight` with `weight` the sum of the
 // amplitudes. That division is what keeps the (-1, 1) guarantee alive across octaves, because
@@ -134,13 +134,13 @@ fn _vgsl_bbb85e49__perlin2d(position: vec2f) -> f32 {
 // `weight >= 1` always (the first amplitude is 1), so the division is never by zero.
 //
 // Free invariant, asserted by the tests: fbmPerlin2d(p, 1, lacunarity, gain) == perlin2d(p) exactly.
-
+ 
 
 // Cost model: one perlin3d is 8 pcg3d hashes, so a 6-octave call is 48 -- prefer fbmPerlin2d when
 // the third axis only carries animation.
+ 
 
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/node_modules/@vgpu/wgsl-std/src/noise/internal/gradient.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/node_modules/@vgpu/wgsl-std/src/noise/internal/gradient.wgsl
 // Shared, table-free gradient core for the gradient-noise families (perlin/, simplex/).
 //
 // Private module: it is intentionally absent from this package's `package.json` exports, so the
@@ -163,40 +163,40 @@ fn _vgsl_bbb85e49__perlin2d(position: vec2f) -> f32 {
       
 
 // 1 / sqrt(2), spelled as a literal because `sqrt` is banned above.
-const _vgsl_a03dd8cd__noiseInvSqrt2: f32 = 0.7071067811865476;
+ const _vgsl_8599ae8e__noiseInvSqrt2: f32 = 0.7071067811865476;
 
 // Gradient selector: pcg2d/pcg3d over the bit pattern of the integer cell (same idiom as
 // voronoi2d/voronoi3d), giving a 2^32-cell period instead of the folklore period-289 float hash.
-fn _vgsl_a03dd8cd__gradIndex2(cell: vec2i) -> u32 { return _vgsl_9a0b5690__pcg2d(bitcast<vec2u>(cell)).x & 7u; }
+ fn _vgsl_8599ae8e__gradIndex2(cell: vec2i) -> u32 { return _vgsl_aa51502b__pcg2d(bitcast<vec2u>(cell)).x & 7u; }
 
 // 12 gradients out of 32 bits: bias is 4/2^32 ~= 1e-9.
-
+ 
 
 // 8 unit gradients. index 0..3 -> (1,0) (-1,0) (0,1) (0,-1);  4..7 -> (+-1,+-1)/sqrt(2).
 // Unit length keeps the 2D field's amplitude bound closed-form (raw sup |perlin2d| = 1/sqrt(2)).
-fn _vgsl_a03dd8cd__gradDot2(index: u32, d: vec2f) -> f32 {
+ fn _vgsl_8599ae8e__gradDot2(index: u32, d: vec2f) -> f32 {
   let axis = select(d.x, d.y, (index & 2u) != 0u);
   let axisDot = select(axis, -axis, (index & 1u) != 0u);
   let sx = select(d.x, -d.x, (index & 1u) != 0u);
   let sy = select(d.y, -d.y, (index & 2u) != 0u);
-  return select(axisDot, _vgsl_a03dd8cd__noiseInvSqrt2 * (sx + sy), index >= 4u);
+  return select(axisDot, _vgsl_8599ae8e__noiseInvSqrt2 * (sx + sy), index >= 4u);
 }
 
 // Perlin's 12 cube-edge gradients (+-1,+-1,0) (+-1,0,+-1) (0,+-1,+-1), length sqrt(2): the dot
 // product costs one add plus two negations, no multiplies.
 // index/4 selects the component pair: 0 -> (x,y), 1 -> (x,z), 2 -> (y,z); bits 0/1 are the signs.
-
+ 
 
 // Quintic fade 6t^5 - 15t^4 + 10t^3 (Perlin 2002): zero first *and* second derivative at the cell
 // boundaries, so lattice seams stay invisible in derivatives (normals) too.
-fn _vgsl_a03dd8cd__noiseFade2(t: vec2f) -> vec2f { return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+ fn _vgsl_8599ae8e__noiseFade2(t: vec2f) -> vec2f { return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
+ 
 
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
 // Wellons lowbias32: https://github.com/skeeto/hash-prospector
+ 
 
-
-fn _vgsl_9a0b5690__pcg2d(value: vec2u) -> vec2u {
+ fn _vgsl_aa51502b__pcg2d(value: vec2u) -> vec2u {
   // 2D multi-output variant cross-mixes with the LCG multiplier instead of pcg3d's y*z pattern.
   var hashed = value * 1664525u + 1013904223u;
   hashed.x = hashed.x + hashed.y * 1664525u;
@@ -208,12 +208,12 @@ fn _vgsl_9a0b5690__pcg2d(value: vec2u) -> vec2u {
   return hashed;
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-
+ 

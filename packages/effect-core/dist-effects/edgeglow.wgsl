@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/edgeglow/effect.wgsl
-struct _vgsl_483379d9__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/edgeglow/effect.wgsl
+struct _vgsl_6943816d__Params {
   threshold: f32,
   intensity: f32,
   hueShift: f32,
@@ -22,26 +22,26 @@ struct _vgsl_483379d9__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_483379d9__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_6943816d__Params;
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let texel = 1.0 / max(params.resolution, vec2f(1.0));
-  let e = _vgsl_95d6fc5a__sobelMag(src, samp, v, texel);
+  let e = _vgsl_8e3019cf__sobelMag(src, samp, v, texel);
   let glow = smoothstep(params.threshold, params.threshold + 0.3, e) * params.intensity;
-  let tint = _vgsl_95d6fc5a__hueRotate(vec3f(1.0, 0.55, 0.25), params.hueShift);
-  let col = _vgsl_35d1d59a__sampleVideo(src, samp, v).rgb;
+  let tint = _vgsl_8e3019cf__hueRotate(vec3f(1.0, 0.55, 0.25), params.hueShift);
+  let col = _vgsl_17688d6e__sampleVideo(src, samp, v).rgb;
   return vec4f(col + glow * tint * 0.9, 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -55,50 +55,50 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
-fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+ fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/f0r.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/f0r.wgsl
 // Shared helpers for the frei0r-ported effects. Pure math, no resources.
 
        
      
 
-fn _vgsl_95d6fc5a__lumOf(c: vec3f) -> f32 {
+ fn _vgsl_8e3019cf__lumOf(c: vec3f) -> f32 {
   return dot(c, vec3f(0.2126, 0.7152, 0.0722));
 }
 
 // Bilinear vector value noise in [-1, 1]. Cheap and seamless by design.
 
 
-
+ 
 
 // 4x4 ordered dither threshold in [0, 1) for a pixel coordinate.
-
+ 
 
 // Ink-dot halftone cell for a rotated grid. Returns 1 inside the dot, 0 outside.
 // ink in [0, 1] is the channel value: brighter channel -> bigger dot.
-
+ 
 
 // 3x3 Sobel magnitude on luminance, in [0, ~4]. texel is one pixel in uv units.
-fn _vgsl_95d6fc5a__sobelMag(src: texture_2d<f32>, samp: sampler, uv: vec2f, texel: vec2f) -> f32 {
+ fn _vgsl_8e3019cf__sobelMag(src: texture_2d<f32>, samp: sampler, uv: vec2f, texel: vec2f) -> f32 {
   var l = array<f32, 9>();
   for (var dy = -1; dy <= 1; dy = dy + 1) {
     for (var dx = -1; dx <= 1; dx = dx + 1) {
       let idx = (dy + 1) * 3 + (dx + 1);
-      l[idx] = _vgsl_95d6fc5a__lumOf(_vgsl_35d1d59a__sampleVideo(src, samp, uv + vec2f(f32(dx), f32(dy)) * texel).rgb);
+      l[idx] = _vgsl_8e3019cf__lumOf(_vgsl_17688d6e__sampleVideo(src, samp, uv + vec2f(f32(dx), f32(dy)) * texel).rgb);
     }
   }
   let gx = (l[2] + 2.0 * l[5] + l[8]) - (l[0] + 2.0 * l[3] + l[6]);
@@ -107,7 +107,7 @@ fn _vgsl_95d6fc5a__sobelMag(src: texture_2d<f32>, samp: sampler, uv: vec2f, texe
 }
 
 // Rotate hue around a fixed axis by t (in turns) with a cheap 3x3 rotation.
-fn _vgsl_95d6fc5a__hueRotate(c: vec3f, t: f32) -> vec3f {
+ fn _vgsl_8e3019cf__hueRotate(c: vec3f, t: f32) -> vec3f {
   let a = t * 6.2831853;
   let ca = cos(a);
   let sa = sin(a);
@@ -120,20 +120,20 @@ fn _vgsl_95d6fc5a__hueRotate(c: vec3f, t: f32) -> vec3f {
 }
 
 // Stable random offset per cell row, driven by an integer tick.
+ 
 
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
 // Wellons lowbias32: https://github.com/skeeto/hash-prospector
+ 
 
+ 
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-
-
-
+ 

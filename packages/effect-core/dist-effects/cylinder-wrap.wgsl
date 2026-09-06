@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/cylinder-wrap/effect.wgsl
-struct _vgsl_94a10455__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/cylinder-wrap/effect.wgsl
+struct _vgsl_3618badd__Params {
   time: f32,
   videoTime: f32,
   radius: f32,
@@ -33,13 +33,13 @@ struct _vgsl_94a10455__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_94a10455__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_3618badd__Params;
 
-const _vgsl_94a10455__TWO_PI: f32 = 6.2831853;
-const _vgsl_94a10455__FLAT_R: f32 = 1e4; // huge radius = flat plane limit
+const _vgsl_3618badd__TWO_PI: f32 = 6.2831853;
+const _vgsl_3618badd__FLAT_R: f32 = 1e4; // huge radius = flat plane limit
 
 // Rounded-box SDF, < 0 inside. p centered half-extents, r in the same units.
-fn _vgsl_94a10455__rbox(p: vec2f, r: f32) -> f32 {
+fn _vgsl_3618badd__rbox(p: vec2f, r: f32) -> f32 {
   let q = abs(p) - vec2f(1.0 - r, 1.0 - r);
   return length(max(q, vec2f(0.0, 0.0))) + min(max(q.x, q.y), 0.0) - r;
 }
@@ -59,7 +59,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (t < 0.30) {
     // base flat
   } else if (t < 0.40) {
-    ce = _vgsl_35d1d59a__easeInOutCubic((t - 0.30) / 0.10);
+    ce = _vgsl_17688d6e__easeInOutCubic((t - 0.30) / 0.10);
   } else if (t < 0.70) {
     ce = 1.0;
   } else if (t < 0.82) {
@@ -71,7 +71,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   // Centered half-extent coords in the video's own aspect space; shrink onto the stage while curled.
-  var q = (_vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize) - vec2f(0.5)) * 2.0;
+  var q = (_vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize) - vec2f(0.5)) * 2.0;
   q = q / mix(1.0, params.scale, ce);
 
   // Rounded stage corners: only while curled, radius grows with curl.
@@ -80,7 +80,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   var mask = 1.0;
   let cr = params.corner * ce;
   if (cr > 0.0) {
-    let sd = _vgsl_94a10455__rbox(q, cr);
+    let sd = _vgsl_3618badd__rbox(q, cr);
     let fw = max(fwidth(sd), 1e-5);
     mask *= 1.0 - smoothstep(-fw, fw, sd);
   }
@@ -90,7 +90,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   // frame vertically; inside the drum, the wall is everywhere equidistant so
   // the sides expand vertically (you are looking out at the surrounding wall).
   let drumR = params.radius * mix(1.0, params.innerScale, params.inner);
-  let R = max(mix(_vgsl_94a10455__FLAT_R, drumR, ce), 0.05);
+  let R = max(mix(_vgsl_3618badd__FLAT_R, drumR, ce), 0.05);
   // Silhouette: beyond |q.x| = R is black stage.
   let xn = q.x / R;
   let fx = max(fwidth(xn), 1e-5);
@@ -113,7 +113,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   // Content rate: full video copy per panel at full curl, identity at flat.
   // Spin uses cycle-local time so the phase target stays bounded; absolute
   // videoTime would make curl-in whip through many turns late in a long clip.
-  let K = mix(0.5, params.panels / (_vgsl_94a10455__TWO_PI * R), ce);
+  let K = mix(0.5, params.panels / (_vgsl_3618badd__TWO_PI * R), ce);
   var u = fract(a * K + t * dur * params.speed * ce * params.dir + 0.5);
 
   if (ce > 0.0) {
@@ -125,16 +125,16 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     u = fract(u / (1.0 - params.gap * ce));
   }
 
-  var col = _vgsl_35d1d59a__sampleVideo(src, samp, vec2f(u, v));
+  var col = _vgsl_17688d6e__sampleVideo(src, samp, vec2f(u, v));
   // Drum shading: facing ratio darkens receding panels, sells the curve.
   let shade = mix(1.0, cos(a / R), min(ce * params.depth * 0.55, 0.85));
   return vec4f(col.rgb * shade * mask, 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -148,14 +148,14 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
-fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+ fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
-fn _vgsl_35d1d59a__easeInOutCubic(t: f32) -> f32 {
+ fn _vgsl_17688d6e__easeInOutCubic(t: f32) -> f32 {
   let x = clamp(t, 0.0, 1.0);
   if (x < 0.5) {
     return 4.0 * x * x * x;
@@ -164,8 +164,8 @@ fn _vgsl_35d1d59a__easeInOutCubic(t: f32) -> f32 {
   return 1.0 - u * u * u / 2.0;
 }
 
+ 
 
+ 
 
-
-
-
+ 

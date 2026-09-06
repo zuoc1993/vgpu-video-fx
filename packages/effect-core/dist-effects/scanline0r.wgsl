@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/scanline0r/effect.wgsl
-struct _vgsl_fe4b16b9__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/scanline0r/effect.wgsl
+struct _vgsl_8864548c__Params {
   strength: f32,
   resolution: vec2f,
   videoSize: vec2f,
@@ -20,33 +20,33 @@ struct _vgsl_fe4b16b9__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_fe4b16b9__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_8864548c__Params;
 
-fn _vgsl_fe4b16b9__sampleAt(uv: vec2f) -> vec3f {
+fn _vgsl_8864548c__sampleAt(uv: vec2f) -> vec3f {
   return textureSampleLevel(src, samp, vec2f(fract(uv.x), clamp(uv.y, 0.0, 1.0)), 0.0).rgb;
 }
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let half = 0.5 / params.resolution.x;
   let phase = fract(v.y * params.resolution.y * 0.5);
   let line = step(0.5, phase); // alternate rows
-  var col = _vgsl_fe4b16b9__sampleAt(v);
+  var col = _vgsl_8864548c__sampleAt(v);
   // CRT aperture grille on line rows: R/B read half a pixel off.
-  col.r = mix(col.r, _vgsl_fe4b16b9__sampleAt(v + vec2f(half, 0.0)).r, line);
-  col.b = mix(col.b, _vgsl_fe4b16b9__sampleAt(v - vec2f(half, 0.0)).b, line);
+  col.r = mix(col.r, _vgsl_8864548c__sampleAt(v + vec2f(half, 0.0)).r, line);
+  col.b = mix(col.b, _vgsl_8864548c__sampleAt(v - vec2f(half, 0.0)).b, line);
   col *= 1.0 - params.strength * 0.55 * line;
   return vec4f(col, 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -60,12 +60,12 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-
+ 

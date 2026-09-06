@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/handheld-cam/effect.wgsl
-struct _vgsl_6fdae404__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/handheld-cam/effect.wgsl
+struct _vgsl_e4636a57__Params {
   time: f32,
   intensity: f32,
   speed: f32,
@@ -26,7 +26,7 @@ struct _vgsl_6fdae404__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_6fdae404__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_e4636a57__Params;
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
@@ -35,26 +35,26 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let breath = 1.0 + params.zoom * (0.35 + 0.85 * whip) * params.intensity;
   let angle = sin(t * 1.13) * 0.05 * params.sway * params.intensity;
   let drift = vec2f(sin(t * 2.4), cos(t * 1.7)) * 0.03 * params.sway * params.intensity;
-  var p = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
-  p = _vgsl_35d1d59a__zoomAt(p, breath, vec2f(0.5) + drift);
-  p = _vgsl_35d1d59a__rotateUv(p, angle, vec2f(0.5));
+  var p = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
+  p = _vgsl_17688d6e__zoomAt(p, breath, vec2f(0.5) + drift);
+  p = _vgsl_17688d6e__rotateUv(p, angle, vec2f(0.5));
 
   let vel = vec2f(cos(t * 1.6), sin(t * 1.15) * 0.65) * params.blur * params.intensity * (0.012 + 0.07 * whip);
-  var color = _vgsl_35d1d59a__directionalBlur(src, samp, p, vel);
+  var color = _vgsl_17688d6e__directionalBlur(src, samp, p, vel);
   var bloom = vec3f(0.0);
   let radius = 0.006 * params.glow;
   for (var i = 0; i < 8; i += 1) {
     let a = f32(i) * 0.785398;
-    bloom += max(_vgsl_35d1d59a__sampleVideo(src, samp, p + vec2f(cos(a), sin(a)) * radius).rgb - vec3f(0.62), vec3f(0.0));
+    bloom += max(_vgsl_17688d6e__sampleVideo(src, samp, p + vec2f(cos(a), sin(a)) * radius).rgb - vec3f(0.62), vec3f(0.0));
   }
   color += bloom / 8.0 * params.glow * 1.6;
   return vec4f(color, 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -68,31 +68,31 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
-fn _vgsl_35d1d59a__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+ fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+ 
 
-
-fn _vgsl_35d1d59a__rotateUv(uv: vec2f, angle: f32, center: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__rotateUv(uv: vec2f, angle: f32, center: vec2f) -> vec2f {
   let c = cos(angle);
   let s = sin(angle);
   let p = uv - center;
   return vec2f(p.x * c - p.y * s, p.x * s + p.y * c) + center;
 }
 
-fn _vgsl_35d1d59a__zoomAt(uv: vec2f, zoom: f32, center: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__zoomAt(uv: vec2f, zoom: f32, center: vec2f) -> vec2f {
   return (uv - center) / max(zoom, 0.01) + center;
 }
 
-fn _vgsl_35d1d59a__directionalBlur(src: texture_2d<f32>, samp: sampler, uv: vec2f, dir: vec2f) -> vec3f {
+ fn _vgsl_17688d6e__directionalBlur(src: texture_2d<f32>, samp: sampler, uv: vec2f, dir: vec2f) -> vec3f {
   var acc = vec3f(0.0);
   for (var i = 0; i < 9; i += 1) {
     let k = (f32(i) / 8.0 - 0.5) * 2.0;
-    acc += _vgsl_35d1d59a__sampleVideo(src, samp, uv + dir * k).rgb;
+    acc += _vgsl_17688d6e__sampleVideo(src, samp, uv + dir * k).rgb;
   }
   return acc / 9.0;
 }

@@ -11,8 +11,8 @@ struct VgpuFullscreenVertexOut {
   out.uv = uv[vi];
   return out;
 }
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/glitch0r/effect.wgsl
-struct _vgsl_fa62b71a__Params {
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/glitch0r/effect.wgsl
+struct _vgsl_9941083e__Params {
   time: f32,
   frequency: f32,
   blockHeight: f32,
@@ -24,31 +24,31 @@ struct _vgsl_fa62b71a__Params {
 
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(0) @binding(2) var<uniform> params: _vgsl_fa62b71a__Params;
+@group(0) @binding(2) var<uniform> params: _vgsl_9941083e__Params;
 
-fn _vgsl_fa62b71a__sampleAt(uv: vec2f) -> vec4f {
+fn _vgsl_9941083e__sampleAt(uv: vec2f) -> vec4f {
   return textureSampleLevel(src, samp, vec2f(fract(uv.x), clamp(uv.y, 0.0, 1.0)), 0.0);
 }
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let v = _vgsl_35d1d59a__containUv(uv, params.resolution, params.videoSize);
+  let v = _vgsl_17688d6e__containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let bhPx = max(mix(4.0, max(160.0, 1.0), params.blockHeight), 1.0);
   let row = floor(v.y * params.resolution.y / bhPx);
   let tick = floor(params.time * mix(6.0, 24.0, params.frequency));
-  let h = _vgsl_9a0b5690__hash3(vec3f(f32(row), tick * 3.1, 0.0));
+  let h = _vgsl_aa51502b__hash3(vec3f(f32(row), tick * 3.1, 0.0));
 
   var w = v;
   if (h.x < params.frequency * 0.7) {
     w.x += (h.y - 0.5) * params.shift * 0.35;
   }
   let split = (h.y - 0.5) * params.colorAmt * 0.05;
-  let r = _vgsl_fa62b71a__sampleAt(w + vec2f(split, 0.0)).r;
-  let g = _vgsl_fa62b71a__sampleAt(w).g;
-  let b = _vgsl_fa62b71a__sampleAt(w - vec2f(split, 0.0)).b;
+  let r = _vgsl_9941083e__sampleAt(w + vec2f(split, 0.0)).r;
+  let g = _vgsl_9941083e__sampleAt(w).g;
+  let b = _vgsl_9941083e__sampleAt(w - vec2f(split, 0.0)).b;
   var col = vec3f(r, g, b);
   if (h.y > 1.0 - params.colorAmt * 0.15) {
     col = col.brg;
@@ -59,10 +59,10 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return vec4f(min(col, vec3f(1.7)), 1.0);
 }
 
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/packages/effect-core/src/effects/shared/video.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
-fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -76,23 +76,23 @@ fn _vgsl_35d1d59a__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
+ 
 
+ 
 
+ 
 
+ 
 
+ 
 
-
-
-
-
-
-// vgsl-module: /Users/zuoc/Documents/vscode/vgpu/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
+// vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/node_modules/@vgpu/wgsl-std/src/hash/index.wgsl
 // Wellons lowbias32: https://github.com/skeeto/hash-prospector
+ 
 
+ 
 
-
-
-fn _vgsl_9a0b5690__pcg3d(value: vec3u) -> vec3u {
+ fn _vgsl_aa51502b__pcg3d(value: vec3u) -> vec3u {
   var hashed = value * 1664525u + 1013904223u;
   hashed.x = hashed.x + hashed.y * hashed.z;
   hashed.y = hashed.y + hashed.z * hashed.x;
@@ -105,15 +105,15 @@ fn _vgsl_9a0b5690__pcg3d(value: vec3u) -> vec3u {
   return hashed;
 }
 
-fn _vgsl_9a0b5690__unitFloat(hash: u32) -> f32 {
+ fn _vgsl_aa51502b__unitFloat(hash: u32) -> f32 {
   return f32(hash >> 8u) * (1.0 / 16777216.0);
 }
 
+ 
 
+ 
 
-
-
-fn _vgsl_9a0b5690__hash3(seed: vec3f) -> vec3f {
-  let hashed = _vgsl_9a0b5690__pcg3d(bitcast<vec3u>(seed));
-  return vec3f(_vgsl_9a0b5690__unitFloat(hashed.x), _vgsl_9a0b5690__unitFloat(hashed.y), _vgsl_9a0b5690__unitFloat(hashed.z));
+ fn _vgsl_aa51502b__hash3(seed: vec3f) -> vec3f {
+  let hashed = _vgsl_aa51502b__pcg3d(bitcast<vec3u>(seed));
+  return vec3f(_vgsl_aa51502b__unitFloat(hashed.x), _vgsl_aa51502b__unitFloat(hashed.y), _vgsl_aa51502b__unitFloat(hashed.z));
 }
