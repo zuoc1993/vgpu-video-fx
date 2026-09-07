@@ -3,12 +3,12 @@
 // The wasm build is single-threaded (no COOP/COEP) and the heavy effects are
 // gather/bandwidth-bound, so preview renders at a capped resolution and the
 // 2D canvas scales the result onto the display canvas. Measured render cost
-// (simd128 build, single thread):
-//   1664x1080 glitch 141ms  glow 240ms   <- unusable for preview
-//   1280x720  glitch  72ms  glow 124ms
-//   960x540   glitch  41ms  glow  69ms
-//   720x405   glitch  23ms  glow  39ms
-//   640x360   glitch  18ms  glow  31ms   <- MAX_RENDER_W target
+// (simd128 build, single thread, 2160x3840 sample):
+//   2160x3840 glitch 698ms  glow 1193ms  <- unusable for preview
+//   1080x1920 glitch 173ms  glow  295ms
+//   720x1280  glitch  77ms  glow  131ms
+//   540x960   glitch  43ms  glow   73ms
+//   640x1138  glitch  61ms  glow  102ms  <- MAX_RENDER_W target
 // Browser pipeline (headless Chrome, dpr 2): capture ~4-7ms + render ~27ms at
 // 720 wide sat exactly on the 30fps rVFC cadence boundary and dropped to
 // ~15fps on any jitter; 640 wide buys a comfortable margin.

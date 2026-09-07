@@ -24,7 +24,7 @@ npm install
 npx vgpu doctor
 ```
 
-示例视频：`public/sample.mp4`（约 1664×1080、3.6s、无音轨）。
+示例视频：`public/sample.mp4`（2160×3840 竖屏、60fps、约 6.7s、无音轨）。
 
 ## 实时预览
 
@@ -185,13 +185,13 @@ zoom 的 `loop`：`1` 循环，`0` 播完停在 `endScale`。出片请传 `video
 
 ## 出片速度
 
-出片每帧都要 CPU→GPU→CPU（1080p RGBA 约 7MB/帧），瓶颈是搬运，不是特效——`none` 也差不多。实测（Apple M3 Max，1664×1080，109 帧/特效）：
+出片每帧都要 CPU→GPU→CPU（2160×3840 RGBA 约 33MB/帧），瓶颈是搬运，不是特效——`none` 也差不多。实测（Apple M3 Max，2160×3840@60fps，400 帧/特效）：
 
 | backend | render fps | 单特效 wall |
 |---|---|---|
-| `wgpu` | ≈ 250–340 | ≈ 2.2s |
-| `socket` | ≈ 70–85（socket 拷贝占大头） | ≈ 3.2s |
-| `native` | 44–524（CPU，因特效而异） | 2.2–4.3s |
+| `wgpu` | ≈ 37–49 | ≈ 36–40s |
+| `socket` | ≈ 16–17（socket 拷贝占大头） | ≈ 52–54s |
+| `native` | 9–101（CPU，因特效而异） | 36–73s |
 
 wgpu 进程内省掉 socket 和第二进程，是目前最快的出片路径。加大 `VGPU_FX_BATCH` 只能少几次往返，总流量不变。Web 预览没有读回，所以快。
 

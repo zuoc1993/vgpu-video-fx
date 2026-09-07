@@ -4,11 +4,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from vgpu_fx_protocol import VgpuFxClient
 
-W, H = 1664, 1080
+W, H = 2160, 3840
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 15
 frame = os.urandom(W * H * 4)
 pixels = frame * N
-times = [i / 30 for i in range(N)]
+times = [i / 60 for i in range(N)]
 
 c = VgpuFxClient(os.environ.get("VGPU_FX_SOCK", "/tmp/vgpu-fx.sock"))
 for effect in ("none", "glitch"):

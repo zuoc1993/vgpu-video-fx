@@ -6,10 +6,11 @@ const wasmBytes = fs.readFileSync("./effect-rs/pkg/effect_rs_bg.wasm");
 await init(wasmBytes);
 
 const SIZES = [
-  [1664, 1080],
-  [1280, 720],
-  [960, 540],
-  [720, 405],
+  [2160, 3840],
+  [1080, 1920],
+  [720, 1280],
+  [540, 960],
+  [640, 1138], // current web preview cap: MAX_RENDER_W=640 on the 2160x3840 sample
 ];
 const EFFECTS = ["none", "posterize", "rgbsplit0r", "glitch", "glow"];
 const FRAMES = 5;

@@ -151,7 +151,7 @@ scripts/{export-effects.mjs,wgsl-export-loader.mjs}   # wgpu 后端导出器
 
 ## 已知限制（改之前先看）
 
-1. 出片路径是 CPU↔GPU 往返，batch / 多 pass 一次 submit **解决不了** 1080p 实时导出。wgpu 进程内后端省掉 socket/进程边界（实测 wall 2.2s vs socket 3.2s），但搬运本身仍在。
+1. 出片路径是 CPU↔GPU 往返，batch / 多 pass 一次 submit **解决不了** 4K 实时导出。wgpu 进程内后端省掉 socket/进程边界（实测单特效 wall ≈37s vs socket ≈53s，2160×3840 400 帧），但搬运本身仍在。
 2. shader 是 `texture_2d`，不是数组，无法一条 draw 吃 N 帧。
 3. 调用方选每段时间的 effect id；引擎不做时间轴编排。
 4. 预览和出片若要像素级一致：同一 id、同一 params、同一 `time`/`videoTime`；预览画布比例若和视频不同，contain 的黑边会不同。出片输出尺寸 = 输入帧尺寸。

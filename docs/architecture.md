@@ -173,11 +173,11 @@ Web 与 sidecar 都把 `time` 和 `videoTime` 设成同一套时间（预览用 
   "id": "1",
   "effect": "glitch",
   "params": { "intensity": 0.7 },
-  "width": 1664,
-  "height": 1080,
+  "width": 2160,
+  "height": 3840,
   "count": 15,
-  "times": [0.0, 0.033, "..."],
-  "videoDuration": 3.63
+  "times": [0.0, 0.0167, "..."],
+  "videoDuration": 6.67
 }
 ```
 
@@ -229,13 +229,13 @@ video.py_module("vgpu_fx", option, HERE, "vgpu_fx.VgpuFx")
 | 路径 | 像素怎么走 | 观感 |
 |---|---|---|
 | Web `renderTo` | GPU 内：video → texture → canvas | 实时 |
-| wgpu 进程内 | CPU RGBA 上 GPU，读回 CPU；无 socket、无第二进程 | 1664×1080 实测 render ≈ 250–340 fps，单特效 wall ≈ 2.2s（109 帧） |
-| Sidecar | 同上，再叠加 socket 双向拷贝 | 同分辨率 render ≈ 70–85 fps，wall ≈ 3.2s |
-| native (effect_rs) | 纯 CPU | 因特效而异（实测 44–524 fps） |
+| wgpu 进程内 | CPU RGBA 上 GPU，读回 CPU；无 socket、无第二进程 | 2160×3840 实测 render ≈ 37–49 fps，单特效 wall ≈ 36–40s（400 帧） |
+| Sidecar | 同上，再叠加 socket 双向拷贝 | 同分辨率 render ≈ 16–17 fps，wall ≈ 52–54s |
+| native (effect_rs) | 纯 CPU | 因特效而异（实测 9–101 fps） |
 
 出片慢主要在 **每帧 上传 + 读回**（socket 路径再加进程间拷贝），不在 shader（`none` 和 `glitch` 帧率几乎一样）。batch 只减少往返次数，不减少字节数。wgpu 后端省掉的是 socket 与进程边界，CPU↔GPU 搬运本身仍在。
 
-（以上实测：Apple M3 Max，109 帧 1664×1080；逐特效数据见 [验证手册](./wgpu-py-validation.md) 的报告模板。）
+（以上实测：Apple M3 Max，400 帧 2160×3840@60fps；逐特效数据见 [验证手册](./wgpu-py-validation.md) 的报告模板。）
 
 vgpu 的 `frame()` 多 pass 是「一帧里一次 submit」，不是「N 个视频帧一次上传」。
 

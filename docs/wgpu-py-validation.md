@@ -147,10 +147,10 @@ cd bmf-demo
 VGPU_FX_BACKEND=wgpu uv run run_demo.py                       # 全量 39 个
 ls -la output/ | wc -l                                        # 39 个 mp4 + .
 # 抽样核对时长/分辨率
-ffprobe -v error -show_entries stream=width,height -of csv=p=0 output/posterize.mp4   # 1664x1080
+ffprobe -v error -show_entries stream=width,height -of csv=p=0 output/posterize.mp4   # 2160x3840
 ```
 
-通过标准：39 个 mp4 生成；控制台每行是 `vgpu_fx[wgpu] {effect}: ... fps`；分辨率 1664x1080。
+通过标准：39 个 mp4 生成；控制台每行是 `vgpu_fx[wgpu] {effect}: ... fps`；分辨率 2160x3840。
 
 失败处置：BMF 报 `libavcodec` 相关错误 → 需要 FFmpeg 4（`brew install ffmpeg@4`），这是 BMF 自身的既有约束，与本次改动无关。
 

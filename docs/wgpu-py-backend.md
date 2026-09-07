@@ -80,6 +80,6 @@ tint→MSL 与 naga→MSL 两条编译链间可能差 ±1 LSB——与 effect-rs
 - 仅覆盖离线出片路径（offscreen + readback）；浏览器预览仍走 vgpu TS
 - `effects.json` 需与 shader 同步更新——改了 `.wgsl` 或 effect `index.ts`
   必须重跑 `npm run export:effects`（`git diff dist-effects/` 即评审面）
-- wgpu-py 每帧十几次 Python API 调用的开销在 1080p 下可忽略；
+- wgpu-py 每帧十几次 Python API 调用的开销在 4K（2160×3840）下可忽略；
   若未来要再压，可把批内循环下沉到一个 Rust PyO3 助手（届时就是完整
   effect-rs GPU 后端的形态了）
