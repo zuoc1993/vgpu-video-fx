@@ -107,4 +107,4 @@ cd bmf-demo && VGPU_FX_BACKEND=socket VGPU_FX_LIST_ONLY=1 uv run run_demo.py  # 
 node scripts/wasm-smoke.mjs     # wasm 绑定冒烟
 ```
 
-特效选择跟随后端：native → `effect_rs.catalog()` 与 TS 清单的交集（当前 5 个）；socket → 全量 38 个；`VGPU_FX_EFFECTS` 可进一步收窄。web 侧同样按后端展示：WebGPU 显示 38 个，Rust CPU (wasm) 显示 wasm catalog 的 5 个。
+特效选择跟随后端：native → `effect_rs.catalog()` 与 TS 清单的交集（当前 5 个）；socket → 全量 39 个；`VGPU_FX_EFFECTS` 可进一步收窄。web 侧同样按后端展示：WebGPU 显示 39 个，Rust CPU (wasm) 显示 wasm catalog 的 5 个。

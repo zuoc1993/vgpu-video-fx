@@ -44,7 +44,7 @@ npm run export:effects
 通过标准（逐条检查）：
 
 ```bash
-ls packages/effect-core/dist-effects/*.wgsl | wc -l    # 期望 38
+ls packages/effect-core/dist-effects/*.wgsl | wc -l    # 期望 39
 ls packages/effect-core/dist-effects/effects.json       # 存在
 # 所有产物必须是标准 WGSL：无 import/export 残留
 grep -rl "^\s*import \|^\s*export " packages/effect-core/dist-effects/*.wgsl   # 期望无输出
@@ -56,7 +56,7 @@ python3 -c "
 import json
 m = json.load(open('packages/effect-core/dist-effects/effects.json'))
 assert m['vertexEntry'] == 'vgpu_fullscreen_vs' and m['fragmentEntry'] == 'fs_main'
-assert m['format'] == 'rgba8unorm' and len(m['effects']) == 38
+assert m['format'] == 'rgba8unorm' and len(m['effects']) == 39
 z = next(e for e in m['effects'] if e['id'] == 'zoom-in')
 assert z['mapping']['videoTime'] == ['ctx', 'videoTimeOrTime'], z['mapping']
 assert z['uniformSize'] == 48 and len(z['fields']) == 8
@@ -70,7 +70,7 @@ print('manifest OK')
 
 - 导出器报 `cannot auto-map uniform field` → 说明某特效 `uniforms()` 出现了导出器不认识的逻辑。**不要改导出器放过它**，把报错原文和该特效的 `index.ts` 的 `uniforms()` 片段贴进报告。
 - 报 binding 形状不符（`unexpected binding shape`）→ 同上，贴报错。
-- 进程退出时出现 `FATAL ERROR ... darwin-universal.dawn.node` → 已知问题（Dawn 校验设备在 hooks 线程的 teardown 竞态）。导出 loader 默认 `validate: "off"` 就是为了避开它；如果仍出现，确认没有设置 `VGPU_EXPORT_VALIDATE`。只要 artifacts 写全（38 个 wgsl + json）且后续步骤通过，可在报告中标注后忽略。
+- 进程退出时出现 `FATAL ERROR ... darwin-universal.dawn.node` → 已知问题（Dawn 校验设备在 hooks 线程的 teardown 竞态）。导出 loader 默认 `validate: "off"` 就是为了避开它；如果仍出现，确认没有设置 `VGPU_EXPORT_VALIDATE`。只要 artifacts 写全（39 个 wgsl + json）且后续步骤通过，可在报告中标注后忽略。
 
 ## Step 2 · 安装 wgpu-py
 
@@ -122,7 +122,7 @@ cd /Users/zuoc/Documents/vscode/vgpu-video-fx && npm run smoke:sidecar   # 先�
 cd bmf-demo && uv run compare_wgpu.py
 ```
 
-通过标准（对照全量 38 特效，默认 10 帧）：
+通过标准（对照全量 39 特效，默认 10 帧）：
 
 - 所有特效都产出 diff 行，无 `LENGTH MISMATCH`、无异常
 - `none` 必须 **mean=0.000 max=0**（直通，任何偏差都说明管线错位）
@@ -144,13 +144,13 @@ cd bmf-demo && uv run compare_wgpu.py
 
 ```bash
 cd bmf-demo
-VGPU_FX_BACKEND=wgpu uv run run_demo.py                       # 全量 38 个
-ls -la output/ | wc -l                                        # 38 个 mp4 + .
+VGPU_FX_BACKEND=wgpu uv run run_demo.py                       # 全量 39 个
+ls -la output/ | wc -l                                        # 39 个 mp4 + .
 # 抽样核对时长/分辨率
 ffprobe -v error -show_entries stream=width,height -of csv=p=0 output/posterize.mp4   # 1664x1080
 ```
 
-通过标准：38 个 mp4 生成；控制台每行是 `vgpu_fx[wgpu] {effect}: ... fps`；分辨率 1664x1080。
+通过标准：39 个 mp4 生成；控制台每行是 `vgpu_fx[wgpu] {effect}: ... fps`；分辨率 1664x1080。
 
 失败处置：BMF 报 `libavcodec` 相关错误 → 需要 FFmpeg 4（`brew install ffmpeg@4`），这是 BMF 自身的既有约束，与本次改动无关。
 
@@ -192,7 +192,7 @@ git diff --cached --stat
 - GPU（adapter OK 行）:
 
 ### Step 1 导出
-- [ ] 38 个 wgsl + effects.json
+- [ ] 39 个 wgsl + effects.json
 - [ ] 无 import/export 残留、入口齐全、manifest 断言通过
 
 ### Step 3 冒烟（贴 5 行输出）
@@ -201,7 +201,7 @@ git diff --cached --stat
 - 超阈值特效及判定:
 
 ### Step 5 端到端
-- [ ] 38 个 mp4；wgpu 后端 fps 汇总 / 与 socket 对照 wall time
+- [ ] 39 个 mp4；wgpu 后端 fps 汇总 / 与 socket 对照 wall time
 
 ### Step 6 回归
 - [ ] typecheck / check:shaders / native

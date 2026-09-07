@@ -55,8 +55,8 @@ npm run preview
 
 | backend | 依赖 | 特效覆盖 | 什么时候用 |
 |---|---|---|---|
-| `wgpu`（推荐） | `uv sync --group wgpu` + 已入库的 `dist-effects/` | 全量 38 个 | 默认；不起 sidecar，最快 |
-| `socket` | `npm run sidecar`（Dawn） | 全量 38 个 | 需要和浏览器/Dawn 逐像素对齐验证时 |
+| `wgpu`（推荐） | `uv sync --group wgpu` + 已入库的 `dist-effects/` | 全量 39 个 | 默认；不起 sidecar，最快 |
+| `socket` | `npm run sidecar`（Dawn） | 全量 39 个 | 需要和浏览器/Dawn 逐像素对齐验证时 |
 | `native` | effect_rs 本地 wheel | 已移植的 5 个 | 无 GPU 环境兜底 |
 
 不指定时 `run_demo.py` 自动选：装了 effect_rs 用 `native`，否则 `socket`；模块内 `pick_backend` 还会在请求后端不可用时按 wgpu→native→socket 回退。
@@ -117,7 +117,7 @@ uv sync
 
 ```sh
 cd bmf-demo
-VGPU_FX_BACKEND=wgpu uv run run_demo.py     # 全量 38 个
+VGPU_FX_BACKEND=wgpu uv run run_demo.py     # 全量 39 个
 ```
 
 输入固定为仓库根下 `public/sample.mp4`。  
@@ -147,7 +147,7 @@ uv run python test_client.py
 
 ### 4. 自己的片子 / 单个特效
 
-`run_demo.py` 里写死了 sample 和 catalog 的 38 个 id。换输入或只出某一个，改 `inp` / `EFFECTS`（或用 `VGPU_FX_EFFECTS=a,b,c`），或在自己的 BMF 图里挂模块：
+`run_demo.py` 里写死了 sample 和 catalog 的 39 个 id。换输入或只出某一个，改 `inp` / `EFFECTS`（或用 `VGPU_FX_EFFECTS=a,b,c`），或在自己的 BMF 图里挂模块：
 
 ```python
 option = {
@@ -231,7 +231,7 @@ Linux 无 GPU 环境装 lavapipe（`apt install mesa-vulkan-drivers`）；macOS 
 API 可能漂移（如 0.32 的读回路径）。按 [验证手册](./wgpu-py-validation.md) 重跑 Step 3/4 验收。
 
 **想逐像素对比 Dawn 和 wgpu 的结果**  
-sidecar 开着，跑 `cd bmf-demo && uv run compare_wgpu.py`（38 特效全表，阈值见验证手册）。
+sidecar 开着，跑 `cd bmf-demo && uv run compare_wgpu.py`（39 特效全表，阈值见验证手册）。
 
 **zoom 不动画**  
 没传 `videoDuration`，或 `times` 全是 0。

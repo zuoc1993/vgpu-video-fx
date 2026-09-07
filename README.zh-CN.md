@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-同一套 WebGPU 特效（38 个）：浏览器里实时预览；BMF 离线出片有三条后端——进程内 wgpu-py（推荐，无需 sidecar）、Node sidecar（Dawn）、effect_rs（CPU，5 个特效）。
+同一套 WebGPU 特效（39 个）：浏览器里实时预览；BMF 离线出片有三条后端——进程内 wgpu-py（推荐，无需 sidecar）、Node sidecar（Dawn）、effect_rs（CPU，5 个特效）。
 
 ## 文档
 

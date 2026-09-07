@@ -1,6 +1,6 @@
 # 架构
 
-本仓库是一套 **WebGPU 视频特效**：同一份 WGSL catalog（38 个特效），两条预览/出片出路——浏览器实时预览，以及 BMF 离线出片。出片有三个可互换的后端：**wgpu**（Python 进程内 wgpu-py 跑导出产物，推荐）、**socket**（RGBA 帧发给 Node sidecar，Dawn 渲染）、**native**（effect_rs Rust/CPU，仅 5 个移植特效）。设计与验收见 [wgpu-py 后端](./wgpu-py-backend.md) / [验证手册](./wgpu-py-validation.md)。
+本仓库是一套 **WebGPU 视频特效**：同一份 WGSL catalog（39 个特效），两条预览/出片出路——浏览器实时预览，以及 BMF 离线出片。出片有三个可互换的后端：**wgpu**（Python 进程内 wgpu-py 跑导出产物，推荐）、**socket**（RGBA 帧发给 Node sidecar，Dawn 渲染）、**native**（effect_rs Rust/CPU，仅 5 个移植特效）。设计与验收见 [wgpu-py 后端](./wgpu-py-backend.md) / [验证手册](./wgpu-py-validation.md)。
 
 仓库名 `vgpu-video-fx`。渲染库是 [vgpu](https://vgpu.sh) `^0.4.0`。
 
@@ -37,7 +37,7 @@
 | 路径 | 职责 |
 |---|---|
 | `packages/effect-core` | 特效定义、WGSL、`EffectEngine` |
-| `packages/effect-core/dist-effects` | 导出产物：38 个拍平 `.wgsl` + `effects.json`（**入库**，wgpu 后端的权威输入） |
+| `packages/effect-core/dist-effects` | 导出产物：39 个拍平 `.wgsl` + `effects.json`（**入库**，wgpu 后端的权威输入） |
 | `packages/web` | 浏览器预览 UI |
 | `packages/sidecar` | Node GPU worker，听 Unix socket |
 | `bmf-demo/` | BMF 图：解码 → `VgpuFx` → 编码；含 `vgpu_fx_gpu.py`（wgpu 渲染器）、`compare_wgpu.py`（Dawn↔wgpu 对照） |
@@ -58,7 +58,7 @@ npm workspaces：`@vgpu-fx/effect-core`、`@vgpu-fx/web`、`@vgpu-fx/sidecar`。
 - `shader`：WGSL 模块（`import "...wgsl"`）
 - `uniforms(values, ctx)`：把滑条值和帧上下文打成 shader `params`
 
-注册表：`packages/effect-core/src/effects/registry.ts`。现有 38 个 id：
+注册表：`packages/effect-core/src/effects/registry.ts`。现有 39 个 id：
 
 | id | 名称 | 类别 |
 |---|---|---|
@@ -200,7 +200,7 @@ Node：`packages/sidecar/src/protocol.ts`。
 
 `bmf-demo/vgpu_fx_gpu.py` 的 `WgpuFxRenderer` 用 [wgpu-py](https://github.com/pygfx/wgpu-py) 在 Python 进程内跑这些产物：Python 不解析 WGSL，按 `effects.json` 打包 uniform 字节。渲染语义刻意与 sidecar 对齐：全屏三角形无顶点缓冲 `draw(3)`、group0 = texture/sampler/uniform、`rgba8unorm` 离屏、clear `[0,0,0,1]`、**逐帧 submit**（uniform 原地写，不合批）、读回 `copy_texture_to_buffer` + 256 对齐去 padding。
 
-一致性基准：sidecar（Dawn/tint→MSL）是参照系，wgpu-py（wgpu/naga→MSL）是同 GPU 的另一条编译链。`bmf-demo/compare_wgpu.py` 对全量 38 特效逐帧比对（需 sidecar 在线）：整数 hash 位级一致，浮点滤波允许 ±1 LSB；判定阈值 mean < 0.05 且 pct>2 < 1%。验收全流程见 [验证手册](./wgpu-py-validation.md)。
+一致性基准：sidecar（Dawn/tint→MSL）是参照系，wgpu-py（wgpu/naga→MSL）是同 GPU 的另一条编译链。`bmf-demo/compare_wgpu.py` 对全量 39 特效逐帧比对（需 sidecar 在线）：整数 hash 位级一致，浮点滤波允许 ±1 LSB；判定阈值 mean < 0.05 且 pct>2 < 1%。验收全流程见 [验证手册](./wgpu-py-validation.md)。
 
 ## BMF 出片
 
@@ -222,7 +222,7 @@ video.py_module("vgpu_fx", option, HERE, "vgpu_fx.VgpuFx")
 
 不要把路径塞进早期的 `module(...)` / `pre_module`（会变成 `str has no attribute uid`）。
 
-`run_demo.py` 按 backend 规划特效集合（wgpu/socket → 全量 38 个；native → effect_rs 已移植的 5 个），各出 `bmf-demo/output/{effect}.mp4`，并打印 `vgpu_fx[{backend}]` 的 render fps / cvt 耗时 / wall time。
+`run_demo.py` 按 backend 规划特效集合（wgpu/socket → 全量 39 个；native → effect_rs 已移植的 5 个），各出 `bmf-demo/output/{effect}.mp4`，并打印 `vgpu_fx[{backend}]` 的 render fps / cvt 耗时 / wall time。
 
 ## 性能模型
 

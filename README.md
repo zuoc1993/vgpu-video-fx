@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-One catalog of WebGPU video effects (38 total): real-time preview in the browser, plus offline rendering via BMF with three interchangeable backends — in-process wgpu-py (recommended, no sidecar needed), a Node sidecar (Dawn), and effect_rs (CPU, 5 effects).
+One catalog of WebGPU video effects (39 total): real-time preview in the browser, plus offline rendering via BMF with three interchangeable backends — in-process wgpu-py (recommended, no sidecar needed), a Node sidecar (Dawn), and effect_rs (CPU, 5 effects).
 
 ## Documentation
 
