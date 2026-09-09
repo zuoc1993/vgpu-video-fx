@@ -213,7 +213,7 @@
       "id": "camera-shake",
       "name": "镜头摇晃",
       "category": "运镜",
-      "description": "机位随机平移，类似剪映「镜头晃动」。",
+      "description": "机位随机平移 + 轻微旋转，带缩放遮黑边，类似手持/镜头晃动。",
       "params": [
         {
           "key": "intensity",
@@ -241,15 +241,35 @@
           "max": 30,
           "step": 0.5,
           "default": 14
+        },
+        {
+          "key": "rotation",
+          "label": "旋转",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.25
+        },
+        {
+          "key": "zoom",
+          "label": "遮黑边缩放",
+          "type": "range",
+          "min": 0,
+          "max": 0.3,
+          "step": 0.005,
+          "default": 0.15
         }
       ],
       "defaults": {
         "intensity": 0.5,
         "speed": 1.2,
-        "frequency": 14
+        "frequency": 14,
+        "rotation": 0.25,
+        "zoom": 0.15
       },
       "wgsl": "camera-shake.wgsl",
-      "uniformSize": 32,
+      "uniformSize": 48,
       "fields": [
         {
           "name": "time",
@@ -272,13 +292,23 @@
           "kind": "f32"
         },
         {
-          "name": "resolution",
+          "name": "rotation",
           "offset": 16,
+          "kind": "f32"
+        },
+        {
+          "name": "zoom",
+          "offset": 20,
+          "kind": "f32"
+        },
+        {
+          "name": "resolution",
+          "offset": 24,
           "kind": "vec2f"
         },
         {
           "name": "videoSize",
-          "offset": 24,
+          "offset": 32,
           "kind": "vec2f"
         }
       ],
@@ -298,6 +328,14 @@
         "frequency": [
           "param",
           "frequency"
+        ],
+        "rotation": [
+          "param",
+          "rotation"
+        ],
+        "zoom": [
+          "param",
+          "zoom"
         ],
         "resolution": [
           "ctx",
@@ -784,25 +822,25 @@
       "id": "zoom-in",
       "name": "Zoom in",
       "category": "缩放",
-      "description": "图层由小变大，S 形缓动，对齐参考片 50%→70% 的放大。",
+      "description": "全屏放大，S 形缓动；默认 1.0→1.35 不露黑边，循环时用 ping-pong 避免跳变。",
       "params": [
         {
           "key": "startScale",
           "label": "起始缩放",
           "type": "range",
-          "min": 0.2,
-          "max": 1.5,
+          "min": 0.5,
+          "max": 2,
           "step": 0.01,
-          "default": 0.5
+          "default": 1
         },
         {
           "key": "endScale",
           "label": "结束缩放",
           "type": "range",
-          "min": 0.2,
-          "max": 1.5,
+          "min": 0.5,
+          "max": 2,
           "step": 0.01,
-          "default": 0.7
+          "default": 1.35
         },
         {
           "key": "duration",
@@ -814,23 +852,53 @@
           "default": 1
         },
         {
+          "key": "centerX",
+          "label": "中心 X",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        },
+        {
+          "key": "centerY",
+          "label": "中心 Y",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        },
+        {
+          "key": "drift",
+          "label": "横向漂移",
+          "type": "range",
+          "min": -1,
+          "max": 1,
+          "step": 0.01,
+          "default": 0
+        },
+        {
           "key": "loop",
           "label": "循环",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 1,
-          "default": 1
+          "default": 0
         }
       ],
       "defaults": {
-        "startScale": 0.5,
-        "endScale": 0.7,
+        "startScale": 1,
+        "endScale": 1.35,
         "duration": 1,
-        "loop": 1
+        "centerX": 0.5,
+        "centerY": 0.5,
+        "drift": 0,
+        "loop": 0
       },
       "wgsl": "zoom-in.wgsl",
-      "uniformSize": 48,
+      "uniformSize": 64,
       "fields": [
         {
           "name": "time",
@@ -863,13 +931,28 @@
           "kind": "f32"
         },
         {
-          "name": "resolution",
+          "name": "centerX",
           "offset": 24,
+          "kind": "f32"
+        },
+        {
+          "name": "centerY",
+          "offset": 28,
+          "kind": "f32"
+        },
+        {
+          "name": "drift",
+          "offset": 32,
+          "kind": "f32"
+        },
+        {
+          "name": "resolution",
+          "offset": 40,
           "kind": "vec2f"
         },
         {
           "name": "videoSize",
-          "offset": 32,
+          "offset": 48,
           "kind": "vec2f"
         }
       ],
@@ -897,6 +980,18 @@
         "looping": [
           "param",
           "loop"
+        ],
+        "centerX": [
+          "param",
+          "centerX"
+        ],
+        "centerY": [
+          "param",
+          "centerY"
+        ],
+        "drift": [
+          "param",
+          "drift"
         ],
         "resolution": [
           "ctx",
@@ -912,25 +1007,25 @@
       "id": "zoom-out",
       "name": "Zoom out",
       "category": "缩放",
-      "description": "图层由大变小，S 形缓动，对齐参考片 70%→50% 的缩小。",
+      "description": "全屏缩小，S 形缓动并向右缓慢漂移；默认 1.35→1.0 不露黑边。",
       "params": [
         {
           "key": "startScale",
           "label": "起始缩放",
           "type": "range",
-          "min": 0.2,
-          "max": 1.5,
+          "min": 0.5,
+          "max": 2,
           "step": 0.01,
-          "default": 0.7
+          "default": 1.35
         },
         {
           "key": "endScale",
           "label": "结束缩放",
           "type": "range",
-          "min": 0.2,
-          "max": 1.5,
+          "min": 0.5,
+          "max": 2,
           "step": 0.01,
-          "default": 0.5
+          "default": 1
         },
         {
           "key": "duration",
@@ -942,23 +1037,53 @@
           "default": 1
         },
         {
+          "key": "centerX",
+          "label": "中心 X",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        },
+        {
+          "key": "centerY",
+          "label": "中心 Y",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.5
+        },
+        {
+          "key": "drift",
+          "label": "横向漂移",
+          "type": "range",
+          "min": -1,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.35
+        },
+        {
           "key": "loop",
           "label": "循环",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 1,
-          "default": 1
+          "default": 0
         }
       ],
       "defaults": {
-        "startScale": 0.7,
-        "endScale": 0.5,
+        "startScale": 1.35,
+        "endScale": 1,
         "duration": 1,
-        "loop": 1
+        "centerX": 0.5,
+        "centerY": 0.5,
+        "drift": 0.35,
+        "loop": 0
       },
       "wgsl": "zoom-out.wgsl",
-      "uniformSize": 48,
+      "uniformSize": 64,
       "fields": [
         {
           "name": "time",
@@ -991,13 +1116,28 @@
           "kind": "f32"
         },
         {
-          "name": "resolution",
+          "name": "centerX",
           "offset": 24,
+          "kind": "f32"
+        },
+        {
+          "name": "centerY",
+          "offset": 28,
+          "kind": "f32"
+        },
+        {
+          "name": "drift",
+          "offset": 32,
+          "kind": "f32"
+        },
+        {
+          "name": "resolution",
+          "offset": 40,
           "kind": "vec2f"
         },
         {
           "name": "videoSize",
-          "offset": 32,
+          "offset": 48,
           "kind": "vec2f"
         }
       ],
@@ -1025,6 +1165,18 @@
         "looping": [
           "param",
           "loop"
+        ],
+        "centerX": [
+          "param",
+          "centerX"
+        ],
+        "centerY": [
+          "param",
+          "centerY"
+        ],
+        "drift": [
+          "param",
+          "drift"
         ],
         "resolution": [
           "ctx",
@@ -1492,7 +1644,7 @@
       "id": "colorhalftone",
       "name": "Color halftone",
       "category": "风格化",
-      "description": "frei0r colorhalftone 复刻：三色旋转网点半调印刷质感。",
+      "description": "frei0r colorhalftone 复刻：三色旋转网点半调印刷质感，标准 15°/75°/0° 网角。",
       "params": [
         {
           "key": "dotRadius",
@@ -1505,37 +1657,37 @@
         },
         {
           "key": "angC",
-          "label": "青网点角",
+          "label": "青网点角(圈)",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 0.01,
-          "default": 0.3
+          "default": 0.0417
         },
         {
           "key": "angM",
-          "label": "品红网点角",
+          "label": "品红网点角(圈)",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 0.01,
-          "default": 0.45
+          "default": 0.2083
         },
         {
           "key": "angY",
-          "label": "黄网点角",
+          "label": "黄网点角(圈)",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 0.01,
-          "default": 0.25
+          "default": 0
         }
       ],
       "defaults": {
         "dotRadius": 0.4,
-        "angC": 0.3,
-        "angM": 0.45,
-        "angY": 0.25
+        "angC": 0.0417,
+        "angM": 0.2083,
+        "angY": 0
       },
       "wgsl": "colorhalftone.wgsl",
       "uniformSize": 32,
@@ -1793,7 +1945,7 @@
       "id": "defish0r",
       "name": "Defish0r",
       "category": "扭曲",
-      "description": "frei0r defish0r 复刻：桶形/鱼眼径向畸变。",
+      "description": "frei0r defish0r 简化复刻：Fish(桶形) 与 Defish(去鱼眼) 双向径向畸变。",
       "params": [
         {
           "key": "amount",
@@ -1812,11 +1964,21 @@
           "max": 1.5,
           "step": 0.01,
           "default": 0.9
+        },
+        {
+          "key": "mode",
+          "label": "Fish(0)/Defish(1)",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "default": 1
         }
       ],
       "defaults": {
         "amount": 0.55,
-        "scale": 0.9
+        "scale": 0.9,
+        "mode": 1
       },
       "wgsl": "defish0r.wgsl",
       "uniformSize": 32,
@@ -1832,13 +1994,18 @@
           "kind": "f32"
         },
         {
-          "name": "resolution",
+          "name": "mode",
           "offset": 8,
+          "kind": "f32"
+        },
+        {
+          "name": "resolution",
+          "offset": 16,
           "kind": "vec2f"
         },
         {
           "name": "videoSize",
-          "offset": 16,
+          "offset": 24,
           "kind": "vec2f"
         }
       ],
@@ -1850,6 +2017,10 @@
         "scale": [
           "param",
           "scale"
+        ],
+        "mode": [
+          "param",
+          "mode"
         ],
         "resolution": [
           "ctx",
@@ -2147,7 +2318,7 @@
       "id": "pixels0rt",
       "name": "Pixels0rt",
       "category": "像素",
-      "description": "frei0r pixels0rt 简化复刻：每列条带拉伸最亮像素形成像素拉丝。",
+      "description": "frei0r pixels0rt 简化复刻：每列条带取最亮行拉伸（单 pass 近似，非真实排序）。",
       "params": [
         {
           "key": "width",
@@ -2476,7 +2647,7 @@
       "id": "rgbsplit0r",
       "name": "Rgb split0r",
       "category": "故障",
-      "description": "frei0r rgbsplit0r 复刻：RGB 通道错位，色差分离（0.5 为中性点）。",
+      "description": "frei0r rgbsplit0r 复刻：水平/垂直独立控制 R/B 反向通道错位（0.5 中性）。",
       "params": [
         {
           "key": "vertical",
@@ -2692,7 +2863,7 @@
       "id": "pixs0r",
       "name": "Pixs0r",
       "category": "故障",
-      "description": "frei0r pixs0r 复刻：随机行块横移切片，JPEG 式错位抖动。",
+      "description": "frei0r pixs0r 简化复刻：行/列块随机横移切片，块高可固定或随机。",
       "params": [
         {
           "key": "intensity",
@@ -2705,12 +2876,21 @@
         },
         {
           "key": "blockHeight",
-          "label": "块高(px)",
+          "label": "块高(px，0=随机)",
           "type": "range",
-          "min": 2,
+          "min": 0,
           "max": 64,
           "step": 1,
           "default": 12
+        },
+        {
+          "key": "columns",
+          "label": "列错位",
+          "type": "range",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.35
         },
         {
           "key": "speed",
@@ -2725,10 +2905,11 @@
       "defaults": {
         "intensity": 0.5,
         "blockHeight": 12,
+        "columns": 0.35,
         "speed": 0.6
       },
       "wgsl": "pixs0r.wgsl",
-      "uniformSize": 32,
+      "uniformSize": 48,
       "fields": [
         {
           "name": "time",
@@ -2746,18 +2927,23 @@
           "kind": "f32"
         },
         {
-          "name": "speed",
+          "name": "columns",
           "offset": 12,
           "kind": "f32"
         },
         {
-          "name": "resolution",
+          "name": "speed",
           "offset": 16,
+          "kind": "f32"
+        },
+        {
+          "name": "resolution",
+          "offset": 24,
           "kind": "vec2f"
         },
         {
           "name": "videoSize",
-          "offset": 24,
+          "offset": 32,
           "kind": "vec2f"
         }
       ],
@@ -2773,6 +2959,10 @@
         "blockHeight": [
           "param",
           "blockHeight"
+        ],
+        "columns": [
+          "param",
+          "columns"
         ],
         "speed": [
           "param",
@@ -2792,7 +2982,7 @@
       "id": "dither",
       "name": "Dither",
       "category": "风格化",
-      "description": "frei0r dither 复刻：4×4 Bayer 有序抖动降色带，值越低越狠。",
+      "description": "frei0r dither 简化复刻：按源像素 4×4 Bayer 有序抖动降色带。",
       "params": [
         {
           "key": "levels",
@@ -2845,7 +3035,7 @@
       "id": "ntsc",
       "name": "NTSC",
       "category": "复古",
-      "description": "frei0r ntsc 复刻：NTSC 色差采样、行相位色闪、信号噪点与扫描线。",
+      "description": "frei0r ntsc 复刻：NTSC 色差采样、动态行相位色闪、信号噪点与扫描线。",
       "params": [
         {
           "key": "noise",
@@ -2884,18 +3074,23 @@
       "uniformSize": 32,
       "fields": [
         {
-          "name": "noise",
+          "name": "time",
           "offset": 0,
           "kind": "f32"
         },
         {
-          "name": "scanlines",
+          "name": "noise",
           "offset": 4,
           "kind": "f32"
         },
         {
-          "name": "burst",
+          "name": "scanlines",
           "offset": 8,
+          "kind": "f32"
+        },
+        {
+          "name": "burst",
+          "offset": 12,
           "kind": "f32"
         },
         {
@@ -2910,6 +3105,10 @@
         }
       ],
       "mapping": {
+        "time": [
+          "ctx",
+          "time"
+        ],
         "noise": [
           "param",
           "noise"
@@ -3080,7 +3279,7 @@
       "id": "glow",
       "name": "Glow",
       "category": "风格化",
-      "description": "frei0r glow 复刻（单 pass 近似）：八向采样光环叠加提亮。",
+      "description": "frei0r glow 单 pass 近似：各向同性八向光环 + 亮部阈值叠加。",
       "params": [
         {
           "key": "blur",
@@ -3428,7 +3627,7 @@
       "id": "dust-bokeh",
       "name": "Dust bokeh",
       "category": "氛围",
-      "description": "灵感来自 PrismaticShadersPack 尘埃粒子 (MIT)：程序化焦外尘点，深度控制虚化半径。",
+      "description": "灵感来自 PrismaticShadersPack 尘埃粒子 (MIT)：程序化暖色焦外尘点，深度控制虚化半径。",
       "params": [
         {
           "key": "count",
@@ -3948,7 +4147,7 @@
       "id": "dissolve",
       "name": "Dissolve",
       "category": "转场",
-      "description": "fBm 阈值溶解：噪声场扫过画面，边缘带燃火色描边，循环节奏。",
+      "description": "fBm 阈值溶解：默认由画面烧到黑再平滑循环回来，边缘带燃火色描边。",
       "params": [
         {
           "key": "speed",
@@ -3979,19 +4178,19 @@
         },
         {
           "key": "invert",
-          "label": "反转",
+          "label": "反转(0=出现,1=消失)",
           "type": "range",
           "min": 0,
           "max": 1,
           "step": 1,
-          "default": 0
+          "default": 1
         }
       ],
       "defaults": {
         "speed": 0.5,
         "scale": 5,
         "edgeGlow": 0.8,
-        "invert": 0
+        "invert": 1
       },
       "wgsl": "dissolve.wgsl",
       "uniformSize": 48,

@@ -19,7 +19,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
   // frei0r semantics: low levels = fewer bands, dither spreads the error.
   let bands = 2.0 + floor(clamp(params.levels, 0.0, 1.0) * 254.0);
-  let coords = vec2u(floor(v * params.resolution));
+  let coords = vec2u(floor(v * params.videoSize));
   let d = bayer4(coords) - 0.5;
   var col = sampleVideo(src, samp, v).rgb * bands;
   col = floor(col + d + 0.5) / bands;

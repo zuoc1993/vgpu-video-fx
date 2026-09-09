@@ -15,6 +15,7 @@ struct VgpuFullscreenVertexOut {
 struct _vgsl_375ac354__Params {
   amount: f32,
   scale: f32,
+  mode: f32,
   resolution: vec2f,
   videoSize: vec2f,
 }
@@ -29,17 +30,26 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let p = v - 0.5;
+  let aspect = params.videoSize.x / max(params.videoSize.y, 1.0);
+  let p = vec2f((v.x - 0.5) * aspect, v.y - 0.5);
   let r = length(p);
-  let curve = 1.0 - params.amount * (r * r * 1.1);
-  let sampled = v - 0.5 + p * curve * params.scale;
-  return _vgsl_17688d6e__sampleVideo(src, samp, sampled + 0.5);
+  // mode=1 (default) is Defish: sample outward, then clamp at the frame edge
+  // so removing a fisheye does not leave a black vignette. mode=0 is the
+  // original Fish/barrel direction, where black outside is expected.
+  let dir = select(-1.0, 1.0, params.mode > 0.5);
+  let curve = 1.0 + dir * params.amount * (r * r * 1.1);
+  let q = p * curve * params.scale;
+  let sampled = q / vec2f(aspect, 1.0) + 0.5;
+  if (params.mode > 0.5) {
+    return _vgsl_17688d6e__sampleVideoClamp(src, samp, sampled);
+  }
+  return _vgsl_17688d6e__sampleVideo(src, samp, sampled);
 }
 
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -50,8 +60,18 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
+
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
+ 
 
  fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -60,10 +80,19 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
- 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
+ fn _vgsl_17688d6e__sampleVideoClamp(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
+  return textureSampleLevel(src, samp, clamp(uv, vec2f(0.0), vec2f(1.0)), 0.0);
+}
 
  
 
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

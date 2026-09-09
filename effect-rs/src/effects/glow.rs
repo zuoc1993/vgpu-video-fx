@@ -2,9 +2,9 @@
 
 use crate::effect::{Effect, EffectMeta};
 use crate::frame::to_u8;
-use crate::math::{contain_uv, in_bounds, smoothstep};
+use crate::math::{contain_uv, in_bounds};
 use crate::params::{get, param, ParamDef, ParamValues};
-use crate::sampler::sample_video;
+use crate::sampler::{sample_video, sample_video_clamp};
 use crate::{FrameContext, FrameView, FrameViewMut};
 
 pub struct GlowEffect;
@@ -32,7 +32,7 @@ impl Effect for GlowEffect {
             id: "glow",
             name: "Glow",
             category: "风格化",
-            description: "frei0r glow 复刻（单 pass 近似）：八向采样光环叠加提亮。",
+            description: "frei0r glow 单 pass 近似：各向同性八向光环 + 亮部阈值叠加。",
             params: &PARAMS,
         }
     }
@@ -59,10 +59,10 @@ impl Effect for GlowEffect {
                     continue;
                 }
                 let base = sample_video(src, vuv);
-                let r = blur / ctx.resolution[0];
+                let r = [blur / ctx.resolution[0], blur / ctx.resolution[1]];
                 let mut acc = [0.0f32; 3];
                 for d in DIR {
-                    let tap = sample_video(src, [vuv[0] + d[0] * r, vuv[1] + d[1] * r]);
+                    let tap = sample_video_clamp(src, [vuv[0] + d[0] * r[0], vuv[1] + d[1] * r[1]]);
                     acc[0] += tap[0];
                     acc[1] += tap[1];
                     acc[2] += tap[2];
@@ -70,12 +70,13 @@ impl Effect for GlowEffect {
                 acc[0] /= 8.0;
                 acc[1] /= 8.0;
                 acc[2] /= 8.0;
-                let lit = smoothstep(threshold, threshold + 0.5, base[0].max(base[1]).max(base[2]));
-                let glow = (0.7 + 0.3 * lit) * amount;
+                let g0 = (acc[0] - threshold).max(0.0) * amount;
+                let g1 = (acc[1] - threshold).max(0.0) * amount;
+                let g2 = (acc[2] - threshold).max(0.0) * amount;
                 let i = x as usize * 4;
-                row[i] = to_u8(base[0] + acc[0] * glow);
-                row[i + 1] = to_u8(base[1] + acc[1] * glow);
-                row[i + 2] = to_u8(base[2] + acc[2] * glow);
+                row[i] = to_u8(base[0] + g0);
+                row[i + 1] = to_u8(base[1] + g1);
+                row[i + 2] = to_u8(base[2] + g2);
                 row[i + 3] = 255;
             }
         }

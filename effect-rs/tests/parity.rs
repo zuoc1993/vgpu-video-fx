@@ -6,7 +6,7 @@ use effect_rs::frame::Frame;
 use effect_rs::math::{contain_uv, hash2, pcg2d, wgsl_fract};
 use effect_rs::params::{defaults_from, ParamValues};
 use effect_rs::registry::{catalog, get};
-use effect_rs::sampler::sample_linear;
+use effect_rs::sampler::{sample_linear, sample_video_clamp};
 
 fn approx(a: f32, b: f32, eps: f32) -> bool {
     (a - b).abs() <= eps
@@ -167,4 +167,71 @@ fn batch_mixed_sizes_error() {
     let f2 = Frame::new(8, 8);
     let err = effect_rs::engine::render_batch(fx, &ParamValues::new(), &[f1, f2], &[0.0, 1.0], 0.0);
     assert!(err.is_err());
+}
+
+#[test]
+fn sampler_clamps_at_edges() {
+    let mut f = Frame::new(2, 2);
+    for (i, px) in f.data.chunks_exact_mut(4).enumerate() {
+        px[0] = (i * 64) as u8;
+        px[1] = 128;
+        px[2] = 200;
+        px[3] = 255;
+    }
+    let s = f.view();
+    let c = sample_video_clamp(s, [-1.0, -1.0]);
+    assert!(approx(c[0], 0.0, 1e-6));
+    let c = sample_video_clamp(s, [2.0, 0.25]);
+    assert!(approx(c[0], 64.0 / 255.0, 1e-6));
+}
+
+#[test]
+fn rgbsplit_axes_are_independent() {
+    let w = 16u32;
+    let h = 1u32;
+    let mut src = Frame::new(w, h);
+    for x in 0..w {
+        let v = if x < w / 2 { 0 } else { 255 };
+        let i = x as usize * 4;
+        src.data[i] = v;
+        src.data[i + 1] = v;
+        src.data[i + 2] = v;
+        src.data[i + 3] = 255;
+    }
+    let fx = get("rgbsplit0r").unwrap();
+    let values = defaults_from(fx.params());
+    let out = render_frame(fx, &values, &src, w, h, Timing::default()).unwrap();
+    let edge = |channel: usize| -> i32 {
+        (0..w as usize)
+            .find(|&x| out.data[x * 4 + channel] > 128)
+            .map(|x| x as i32)
+            .unwrap_or(-1)
+    };
+    let (r, g, b) = (edge(0), edge(1), edge(2));
+    assert!(r >= 0 && g >= 0 && b >= 0, "missing edges: {r} {g} {b}");
+    assert!(r < g && g < b, "axes collapsed: R={r} G={g} B={b}");
+}
+
+#[test]
+fn glow_threshold_keeps_dark_flat() {
+    let mut src = Frame::new(4, 4);
+    for px in src.data.chunks_exact_mut(4) {
+        px[0] = 64;
+        px[1] = 64;
+        px[2] = 64;
+        px[3] = 255;
+    }
+    let fx = get("glow").unwrap();
+    let mut values = defaults_from(fx.params());
+    values.insert("blur".into(), 9.0);
+    values.insert("amount".into(), 1.1);
+    values.insert("threshold".into(), 0.5);
+    let out = render_frame(fx, &values, &src, 4, 4, Timing::default()).unwrap();
+    let max = out
+        .data
+        .chunks_exact(4)
+        .flat_map(|px| [px[0], px[1], px[2]])
+        .max()
+        .unwrap();
+    assert!(max <= 70, "glow leaked into dark areas: {max}");
 }

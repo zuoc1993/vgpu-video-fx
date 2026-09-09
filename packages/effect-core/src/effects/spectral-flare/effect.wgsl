@@ -59,20 +59,23 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let lum = dot(color, vec3f(0.2126, 0.7152, 0.0722));
   let mask = smoothstep(params.threshold - 0.1, params.threshold + 0.1, lum) * params.strength;
 
-  // Spectral ghost samples along the light -> center axis.
+  // Spectral ghost samples along the light -> center axis. A slow time
+  // term keeps the flare alive instead of freezing it to the frame.
+  let anim = params.time * 0.35;
   var flare = vec3f(0.0);
   for (var i = 0u; i < 6u; i += 1u) {
     let t = f32(i) / 5.0;
-    let offsetScale = (0.02 + 0.08 * t) * dist * mix(1.0, params.size * 10.0, 0.5);
+    let offsetScale = (0.02 + 0.08 * t) * dist * mix(1.0, params.size * 10.0, 0.5)
+                      * (1.0 + 0.15 * sin(anim + t * 6.2831853));
     let ghost1 = center + dir * 1.5 + dir * offsetScale;
     let ghost2 = center + dir * 0.7 - dir * offsetScale * 0.5;
-    let rgb = wavelengthToRgb(380.0 + t * 400.0);
+    let rgb = wavelengthToRgb(380.0 + t * 400.0 + sin(anim + t * 3.0) * 12.0);
     flare += sampleVideoW(ghost1) * rgb * mask * 0.4;
     flare += sampleVideoW(ghost2) * rgb * mask * 0.25;
   }
 
   // Broad halo around bright regions.
-  let haloWidth = 0.03;
+  let haloWidth = 0.03 * (1.0 + 0.1 * sin(anim * 1.3));
   let haloColor = (sampleVideoW(v + dir * haloWidth) + sampleVideoW(v - dir * haloWidth)) * 0.5;
   let haloMask = smoothstep(params.threshold * 0.3, params.threshold, lum);
   flare += haloColor * haloMask * 0.2 * params.halo;

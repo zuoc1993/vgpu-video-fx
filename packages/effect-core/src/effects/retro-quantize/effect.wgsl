@@ -14,6 +14,14 @@ struct Params {
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var<uniform> params: Params;
 
+// Oklab expects linear-light RGB; the texture sample and palette entries are
+// sRGB-encoded, so decode first. Matching in gamma space skews shadows badly.
+fn srgbToLinear(c: vec3f) -> vec3f {
+  let lo = c / 12.92;
+  let hi = pow((c + vec3f(0.055)) / 1.055, vec3f(2.4));
+  return select(hi, lo, c <= vec3f(0.04045));
+}
+
 // Oklab (relative D65), Björn Ottosson, still MIT/public math.
 fn toOklab(c: vec3f) -> vec3f {
   let l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
@@ -76,9 +84,9 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
   var c = textureSampleLevel(src, samp, v, 0.0).rgb;
   // Dither in RGB space before the lab match, offsets per pixel.
-  let dthr = (bayer4(vec2u(floor(v * params.resolution))) - 0.5) * params.dither * 0.3;
+  let dthr = (bayer4(vec2u(floor(v * params.videoSize))) - 0.5) * params.dither * 0.3;
   let q = c + vec3f(dthr);
-  let lab = toOklab(clamp(q, vec3f(0.0), vec3f(1.0)));
+  let lab = toOklab(srgbToLinear(clamp(q, vec3f(0.0), vec3f(1.0))));
   let count = paletteCount(params.colors);
   var best = 1e10;
   var bestCol = vec3f(0.0);
@@ -87,7 +95,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       break;
     }
     let cand = paletteColor(i, count);
-    let dl = toOklab(cand) - lab;
+    let dl = toOklab(srgbToLinear(cand)) - lab;
     let dist = dot(dl, dl);
     if (dist < best) {
       best = dist;

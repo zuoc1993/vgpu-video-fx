@@ -1,4 +1,4 @@
-import { containUv } from "../shared/video.wgsl";
+import { containUv, sampleVideo } from "../shared/video.wgsl";
 
 struct Params {
   vertical: f32,
@@ -11,21 +11,18 @@ struct Params {
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var<uniform> params: Params;
 
-fn channel(uv: vec2f, axis: f32) -> vec3f {
-  // frei0r semantics: 0.5 is the neutral point, 1.0 maximal offset.
-  let full = (axis - 0.5) * 0.12;
-  let uv2 = vec2f(uv.x + full, uv.y - full);
-  return textureSampleLevel(src, samp, vec2f(fract(uv2.x), clamp(uv2.y, 0.0, 1.0)), 0.0).xyz;
-}
-
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let v = containUv(uv, params.resolution, params.videoSize);
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let r = channel(v, params.horizontal).r;
-  let b = channel(v, params.vertical).b;
-  let g = channel(v, 0.5).g;
+  // 0.5 is neutral. horizontal and vertical are independent axes; R moves in
+  // +offset and B in -offset, so at the default (0.9, 0.9) the red and blue
+  // fringes land on opposite sides instead of collapsing onto each other.
+  let offset = (vec2f(params.horizontal, params.vertical) - vec2f(0.5)) * 0.12;
+  let r = sampleVideo(src, samp, v + offset).r;
+  let g = sampleVideo(src, samp, v).g;
+  let b = sampleVideo(src, samp, v - offset).b;
   return vec4f(r, g, b, 1.0);
 }

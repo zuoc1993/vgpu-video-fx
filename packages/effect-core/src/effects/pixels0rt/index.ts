@@ -5,7 +5,7 @@ export const pixels0rtEffect: EffectDefinition = {
   id: "pixels0rt",
   name: "Pixels0rt",
   category: "像素",
-  description: "frei0r pixels0rt 简化复刻：每列条带拉伸最亮像素形成像素拉丝。",
+  description: "frei0r pixels0rt 简化复刻：每列条带取最亮行拉伸（单 pass 近似，非真实排序）。",
   params: [
     { key: "width", label: "条带宽", type: "range", min: 0, max: 1, step: 0.01, default: 0.4 },
     { key: "strength", label: "拉丝强度", type: "range", min: 0, max: 1, step: 0.01, default: 0.8 },

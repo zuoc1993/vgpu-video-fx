@@ -21,7 +21,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
   let p = vec2f((v.x - 0.5) * ar, v.y - 0.5);
   let t = params.time * params.speed;
   // Rotating sweep axis; band position drifts back and forth.
@@ -30,7 +30,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let band = exp(-(d * d) / max(params.size * 0.35, 0.02));
   // Hot lower-right corner, e.g. shutter leak.
   let corner = exp(-length(p - vec2f(0.7, -0.5)) * 3.2) * 0.8;
-  let leak = clamp(band * 0.7 + corner, 0.0, 1.0) * params.intensity;
+  let leak = clamp((band * 0.7 + corner) * params.intensity, 0.0, 1.0);
   let warm = vec3f(1.0, 0.55, 0.25);
   var col = sampleVideo(src, samp, v).rgb;
   col = pow(col, vec3f(0.92)); // slight film highlight roll

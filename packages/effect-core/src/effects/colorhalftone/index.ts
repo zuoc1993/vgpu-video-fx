@@ -5,12 +5,12 @@ export const colorhalftoneEffect: EffectDefinition = {
   id: "colorhalftone",
   name: "Color halftone",
   category: "风格化",
-  description: "frei0r colorhalftone 复刻：三色旋转网点半调印刷质感。",
+  description: "frei0r colorhalftone 复刻：三色旋转网点半调印刷质感，标准 15°/75°/0° 网角。",
   params: [
     { key: "dotRadius", label: "网点尺寸", type: "range", min: 0, max: 1, step: 0.01, default: 0.4 },
-    { key: "angC", label: "青网点角", type: "range", min: 0, max: 1, step: 0.01, default: 0.3 },
-    { key: "angM", label: "品红网点角", type: "range", min: 0, max: 1, step: 0.01, default: 0.45 },
-    { key: "angY", label: "黄网点角", type: "range", min: 0, max: 1, step: 0.01, default: 0.25 },
+    { key: "angC", label: "青网点角(圈)", type: "range", min: 0, max: 1, step: 0.01, default: 0.0417 },
+    { key: "angM", label: "品红网点角(圈)", type: "range", min: 0, max: 1, step: 0.01, default: 0.2083 },
+    { key: "angY", label: "黄网点角(圈)", type: "range", min: 0, max: 1, step: 0.01, default: 0.0 },
   ],
   shader,
   uniforms(values, ctx) {

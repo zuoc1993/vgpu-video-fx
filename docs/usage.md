@@ -172,14 +172,18 @@ video.encode(None, {"output_path": "out.mp4", "video_params": {"codec": "h264"}}
 |---|---|
 | `none` | 无 |
 | `handheld-cam` | intensity 0.75, speed 1, zoom 0.14, sway 1, blur 1, glow 0.55 |
-| `camera-shake` | intensity 0.5, speed 1.2, frequency 14 |
+| `camera-shake` | intensity 0.5, speed 1.2, frequency 14, rotation 0.25, zoom 0.15 |
 | `local-push` | intensity 0.75, speed 0.85, zoom 0.45, centerX/Y 0.5, chromatic 0.7, distortion 0.4, glow 0.55 |
 | `glitch` | intensity 0.7, speed 1.4, slices 28, rgbSplit 1, block 0.8, scanline 0.35 |
 | `screen-shake` | intensity 0.7, speed 1.6, punch 0.9, blur 0.85 |
-| `zoom-in` | startScale 0.5, endScale 0.7, duration 1, **loop** 1 |
-| `zoom-out` | startScale 0.7, endScale 0.5, duration 1, **loop** 1 |
+| `zoom-in` | startScale 1.0, endScale 1.35, duration 1, centerX/Y 0.5, drift 0, **loop** 0 |
+| `zoom-out` | startScale 1.35, endScale 1.0, duration 1, centerX/Y 0.5, drift 0.35, **loop** 0 |
+| `colorhalftone` | dotRadius 0.4, angC 0.0417, angM 0.2083, angY 0 |
+| `defish0r` | amount 0.55, scale 0.9, mode 1 (Defish) |
+| `pixs0r` | intensity 0.5, blockHeight 12 (0=随机), columns 0.35, speed 0.6 |
+| `dissolve` | speed 0.5, scale 5, edgeGlow 0.8, invert 1 (烧掉) |
 
-zoom 的 `loop`：`1` 循环，`0` 播完停在 `endScale`。出片请传 `videoDuration`（秒），缓动按 pts/`videoTime` 走。
+zoom 的 `loop`：`1` 用 ping-pong 平滑循环，`0` 播完停在 `endScale`。出片请传 `videoDuration`（秒），缓动按 pts/`videoTime` 走。默认起止缩放都 ≥1，不再露黑边。
 
 时间：预览用播放头；出片用帧 pts（秒）。调用方按时间轴选 **哪一个 id**，引擎不负责「到点切特效」。
 

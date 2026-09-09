@@ -26,11 +26,12 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     sin(v.y * params.freq * 6.28318 + sin(t * 1.7) * 2.0) + sin(v.y * params.freq * 3.7 - t * 2.3) * 0.5,
     sin(v.x * params.freq * 1.3 + t * 1.9) * 0.7 + sin(v.x * params.freq * 2.9 - t) * 0.5
   );
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
   let p = vec2f((v.x - 0.5) * ar, v.y - 0.5);
   let a = sin(t * 0.62) * params.swirl * 0.25;
   let c = cos(a);
   let s = sin(a);
   let q = vec2f(p.x * c - p.y * s, p.x * s + p.y * c);
-  return sampleVideo(src, samp, v + d * params.amp + (q - p));
+  let disp = d * params.amp + vec2f((q - p).x / ar, (q - p).y);
+  return sampleVideo(src, samp, v + disp);
 }

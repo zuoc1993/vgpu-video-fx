@@ -28,6 +28,14 @@ struct _vgsl_e7f77062__Params {
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var<uniform> params: _vgsl_e7f77062__Params;
 
+// Oklab expects linear-light RGB; the texture sample and palette entries are
+// sRGB-encoded, so decode first. Matching in gamma space skews shadows badly.
+fn _vgsl_e7f77062__srgbToLinear(c: vec3f) -> vec3f {
+  let lo = c / 12.92;
+  let hi = pow((c + vec3f(0.055)) / 1.055, vec3f(2.4));
+  return select(hi, lo, c <= vec3f(0.04045));
+}
+
 // Oklab (relative D65), Björn Ottosson, still MIT/public math.
 fn _vgsl_e7f77062__toOklab(c: vec3f) -> vec3f {
   let l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
@@ -90,9 +98,9 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
   var c = textureSampleLevel(src, samp, v, 0.0).rgb;
   // Dither in RGB space before the lab match, offsets per pixel.
-  let dthr = (_vgsl_8e3019cf__bayer4(vec2u(floor(v * params.resolution))) - 0.5) * params.dither * 0.3;
+  let dthr = (_vgsl_8e3019cf__bayer4(vec2u(floor(v * params.videoSize))) - 0.5) * params.dither * 0.3;
   let q = c + vec3f(dthr);
-  let lab = _vgsl_e7f77062__toOklab(clamp(q, vec3f(0.0), vec3f(1.0)));
+  let lab = _vgsl_e7f77062__toOklab(_vgsl_e7f77062__srgbToLinear(clamp(q, vec3f(0.0), vec3f(1.0))));
   let count = _vgsl_e7f77062__paletteCount(params.colors);
   var best = 1e10;
   var bestCol = vec3f(0.0);
@@ -101,7 +109,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       break;
     }
     let cand = _vgsl_e7f77062__paletteColor(i, count);
-    let dl = _vgsl_e7f77062__toOklab(cand) - lab;
+    let dl = _vgsl_e7f77062__toOklab(_vgsl_e7f77062__srgbToLinear(cand)) - lab;
     let dist = dot(dl, dl);
     if (dist < best) {
       best = dist;
@@ -114,7 +122,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -125,15 +133,32 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
  
 
  
 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
  
 
+ 
+
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

@@ -5,7 +5,7 @@ export const glowEffect: EffectDefinition = {
   id: "glow",
   name: "Glow",
   category: "风格化",
-  description: "frei0r glow 复刻（单 pass 近似）：八向采样光环叠加提亮。",
+  description: "frei0r glow 单 pass 近似：各向同性八向光环 + 亮部阈值叠加。",
   params: [
     { key: "blur", label: "光晕半径", type: "range", min: 1, max: 24, step: 0.5, default: 9 },
     { key: "amount", label: "光强", type: "range", min: 0, max: 2, step: 0.05, default: 1.1 },

@@ -73,20 +73,23 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let lum = dot(color, vec3f(0.2126, 0.7152, 0.0722));
   let mask = smoothstep(params.threshold - 0.1, params.threshold + 0.1, lum) * params.strength;
 
-  // Spectral ghost samples along the light -> center axis.
+  // Spectral ghost samples along the light -> center axis. A slow time
+  // term keeps the flare alive instead of freezing it to the frame.
+  let anim = params.time * 0.35;
   var flare = vec3f(0.0);
   for (var i = 0u; i < 6u; i += 1u) {
     let t = f32(i) / 5.0;
-    let offsetScale = (0.02 + 0.08 * t) * dist * mix(1.0, params.size * 10.0, 0.5);
+    let offsetScale = (0.02 + 0.08 * t) * dist * mix(1.0, params.size * 10.0, 0.5)
+                      * (1.0 + 0.15 * sin(anim + t * 6.2831853));
     let ghost1 = center + dir * 1.5 + dir * offsetScale;
     let ghost2 = center + dir * 0.7 - dir * offsetScale * 0.5;
-    let rgb = _vgsl_9244c219__wavelengthToRgb(380.0 + t * 400.0);
+    let rgb = _vgsl_9244c219__wavelengthToRgb(380.0 + t * 400.0 + sin(anim + t * 3.0) * 12.0);
     flare += _vgsl_9244c219__sampleVideoW(ghost1) * rgb * mask * 0.4;
     flare += _vgsl_9244c219__sampleVideoW(ghost2) * rgb * mask * 0.25;
   }
 
   // Broad halo around bright regions.
-  let haloWidth = 0.03;
+  let haloWidth = 0.03 * (1.0 + 0.1 * sin(anim * 1.3));
   let haloColor = (_vgsl_9244c219__sampleVideoW(v + dir * haloWidth) + _vgsl_9244c219__sampleVideoW(v - dir * haloWidth)) * 0.5;
   let haloMask = smoothstep(params.threshold * 0.3, params.threshold, lum);
   flare += haloColor * haloMask * 0.2 * params.halo;
@@ -103,7 +106,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -114,15 +117,32 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
 
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
  
 
  
 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
  
 
+ 
+
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

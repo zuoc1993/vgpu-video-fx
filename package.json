@@ -22,7 +22,8 @@
     "build:effect-rs:py": "cd bmf-demo && uvx maturin build --release -m ../effect-rs/Cargo.toml && uv pip install --reinstall effect-rs/target/wheels/effect_rs-*.whl",
     "test:effect-rs": "cargo test --manifest-path effect-rs/Cargo.toml",
     "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
-    "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run smoke:sidecar && npm run check:frames && npm run check:video-wait && npm run typecheck"
+    "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run check:regressions && npm run smoke:sidecar && npm run check:frames && npm run check:video-wait && npm run typecheck",
+    "check:regressions": "node scripts/check-effect-regressions.mjs"
   },
   "dependencies": {
     "vgpu": "^0.4.0"

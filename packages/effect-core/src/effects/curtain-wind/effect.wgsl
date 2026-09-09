@@ -58,7 +58,9 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
            + bamp * cos(bphase) * 1.2;
   let dzdy = params.strength * 0.055 * env * dfreedom * sin(phase)
            + amp * cos(phase) * cos(wob) * 2.34 * freedom
-           + bamp * cos(bphase) * 2.2;
+           + amp * cos(phase) * sin(wob) * 0.9 * dfreedom
+           + bamp * cos(bphase) * 2.2
+           + params.strength * 0.05 * env * dfreedom * sin(bphase);
 
   // ---- 形变：到布面真正所在的位置取样 ------------------------------------
   // 褶皱沿 x 挤压/拉伸；整体鼓起时下摆上抬；外加整幅缓摆。

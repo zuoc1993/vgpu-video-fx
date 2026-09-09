@@ -100,8 +100,9 @@ npm workspaces：`@vgpu-fx/effect-core`、`@vgpu-fx/web`、`@vgpu-fx/sidecar`。
 | `grade` | Grade | 调整 |
 | `light-leak` | Light leak | 氛围 |
 | `dissolve` | Dissolve | 转场 |
+| `curtain-wind` | Curtain Wind | 扭曲 |
 
-`zoom-out` 复用 `zoom-in/effect.wgsl`，只改默认起止缩放。共用几何在 `effects/shared/video.wgsl`（`containUv`、`sampleVideo`、缓动、方向模糊）；hash / perlin 噪声等来自 `@vgpu/wgsl-std`（导出器会内联拍平）。
+`zoom-out` 复用 `zoom-in/effect.wgsl`，默认带横向漂移以区分观感。共用几何在 `effects/shared/video.wgsl`（`containUv`、`sourceTexel`、`sampleVideo`、`sampleVideoClamp`、缓动、方向模糊、宽高比校正的 rotate/zoom）；hash / perlin 噪声等来自 `@vgpu/wgsl-std`（导出器会内联拍平）。
 
 ### 时钟
 

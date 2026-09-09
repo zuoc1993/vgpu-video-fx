@@ -1,7 +1,7 @@
 // Shared helpers for the frei0r-ported effects. Pure math, no resources.
 
 import { pcg2d, unitFloat, hash1 } from "@vgpu/wgsl-std/hash";
-import { sampleVideo } from "./video.wgsl";
+import { sampleVideoClamp } from "./video.wgsl";
 
 export fn lumOf(c: vec3f) -> f32 {
   return dot(c, vec3f(0.2126, 0.7152, 0.0722));
@@ -45,7 +45,7 @@ export fn halftoneDot(p: vec2f, angle: f32, freq: f32, ink: f32) -> f32 {
   let g = mat2x2(c, s, -s, c) * p * freq;
   let lattice = fract(g + 0.5) - 0.5;
   let d = length(lattice);
-  return step(d, 0.5 * sqrt(ink));
+  return step(d, sqrt(max(ink, 0.0) / 3.14159265));
 }
 
 // 3x3 Sobel magnitude on luminance, in [0, ~4]. texel is one pixel in uv units.
@@ -54,7 +54,7 @@ export fn sobelMag(src: texture_2d<f32>, samp: sampler, uv: vec2f, texel: vec2f)
   for (var dy = -1; dy <= 1; dy = dy + 1) {
     for (var dx = -1; dx <= 1; dx = dx + 1) {
       let idx = (dy + 1) * 3 + (dx + 1);
-      l[idx] = lumOf(sampleVideo(src, samp, uv + vec2f(f32(dx), f32(dy)) * texel).rgb);
+      l[idx] = lumOf(sampleVideoClamp(src, samp, uv + vec2f(f32(dx), f32(dy)) * texel).rgb);
     }
   }
   let gx = (l[2] + 2.0 * l[5] + l[8]) - (l[0] + 2.0 * l[3] + l[6]);
@@ -67,10 +67,13 @@ export fn hueRotate(c: vec3f, t: f32) -> vec3f {
   let a = t * 6.2831853;
   let ca = cos(a);
   let sa = sin(a);
+  // WGSL matrices are column-major: pass the columns of the Rec.601 hue
+  // rotation matrix. Passing its rows here transposes the rotation and breaks
+  // luminance preservation (a pure red would jump from luma 0.299 to ~0.46).
   let m = mat3x3(
-    0.299 + 0.701 * ca + 0.168 * sa, 0.587 - 0.587 * ca + 0.330 * sa, 0.114 - 0.114 * ca - 0.497 * sa,
-    0.299 - 0.299 * ca - 0.328 * sa, 0.587 + 0.413 * ca + 0.035 * sa, 0.114 - 0.114 * ca + 0.292 * sa,
-    0.299 - 0.300 * ca + 1.250 * sa, 0.587 - 0.588 * ca - 1.050 * sa, 0.114 + 0.886 * ca - 0.203 * sa,
+    0.299 + 0.701 * ca + 0.168 * sa, 0.299 - 0.299 * ca - 0.328 * sa, 0.299 - 0.300 * ca + 1.250 * sa,
+    0.587 - 0.587 * ca + 0.330 * sa, 0.587 + 0.413 * ca + 0.035 * sa, 0.587 - 0.588 * ca - 1.050 * sa,
+    0.114 - 0.114 * ca - 0.497 * sa, 0.114 - 0.114 * ca + 0.292 * sa, 0.114 + 0.886 * ca - 0.203 * sa,
   );
   return m * c;
 }

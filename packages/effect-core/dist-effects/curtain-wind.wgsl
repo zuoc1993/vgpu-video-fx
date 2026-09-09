@@ -70,7 +70,9 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
            + bamp * cos(bphase) * 1.2;
   let dzdy = params.strength * 0.055 * env * dfreedom * sin(phase)
            + amp * cos(phase) * cos(wob) * 2.34 * freedom
-           + bamp * cos(bphase) * 2.2;
+           + amp * cos(phase) * sin(wob) * 0.9 * dfreedom
+           + bamp * cos(bphase) * 2.2
+           + params.strength * 0.05 * env * dfreedom * sin(bphase);
 
   // ---- 形变：到布面真正所在的位置取样 ------------------------------------
   // 褶皱沿 x 挤压/拉伸；整体鼓起时下摆上抬；外加整幅缓摆。
@@ -104,7 +106,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -115,8 +117,18 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
+
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
+ 
 
  fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -125,10 +137,17 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
  
 
  
 
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

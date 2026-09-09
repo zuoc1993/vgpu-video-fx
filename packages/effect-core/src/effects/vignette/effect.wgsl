@@ -18,7 +18,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
   let p = vec2f((v.x - 0.5) * ar, v.y - 0.5);
   let d = length(p) * 2.0;
   let inner = params.radius * (1.0 - params.softness);

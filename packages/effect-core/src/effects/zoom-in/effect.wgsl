@@ -7,6 +7,9 @@ struct Params {
   endScale: f32,
   duration: f32,
   looping: f32,
+  centerX: f32,
+  centerY: f32,
+  drift: f32,
   resolution: vec2f,
   videoSize: vec2f,
 }
@@ -18,13 +21,15 @@ struct Params {
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let dur = max(params.duration, 0.05);
-  var t = params.videoTime / dur;
+  var x = params.videoTime / dur;
   if (params.looping > 0.5) {
-    t = fract(t);
+    // Ping-pong: loop mode should not snap from endScale back to startScale.
+    x = 1.0 - abs(2.0 * fract(x) - 1.0);
   } else {
-    t = clamp(t, 0.0, 1.0);
+    x = clamp(x, 0.0, 1.0);
   }
-  let scale = mix(params.startScale, params.endScale, easeInOutCubic(t));
-  let vuv = (containUv(uv, params.resolution, params.videoSize) - vec2f(0.5)) / scale + vec2f(0.5);
+  let scale = mix(params.startScale, params.endScale, easeInOutCubic(x));
+  let center = vec2f(params.centerX, params.centerY) + vec2f(params.drift * (x - 0.5), 0.0);
+  let vuv = (containUv(uv, params.resolution, params.videoSize) - center) / scale + center;
   return sampleVideo(src, samp, vuv);
 }

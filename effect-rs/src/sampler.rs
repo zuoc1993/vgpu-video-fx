@@ -50,3 +50,9 @@ pub fn sample_video(src: FrameView<'_>, uv: [f32; 2]) -> [f32; 4] {
     }
     sample_linear(src, uv)
 }
+
+/// Port of shared/video.wgsl sampleVideoClamp: clamp to the frame edge.
+#[inline]
+pub fn sample_video_clamp(src: FrameView<'_>, uv: [f32; 2]) -> [f32; 4] {
+    sample_linear(src, [uv[0].clamp(0.0, 1.0), uv[1].clamp(0.0, 1.0)])
+}

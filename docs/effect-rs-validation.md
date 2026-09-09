@@ -6,9 +6,9 @@
 
 架构可行，端到端验证通过：
 
-- **实现一致性**：5 个移植特效中 4 个与 GPU（WebGPU sidecar）输出达到位级一致或 ±1 LSB；glitch 99.99% 以上像素在 ±2 LSB 内（详见 §2）。
+- **实现一致性**：5 个移植特效与 GPU（WebGPU sidecar）输出均达到位级一致或 ±1 LSB；2026-09-09 回归复测 glitch max=1、pct>2=0.00%（详见 §2/§2.1）。
 - **性能**：离线渲染 native（PyO3，rayon 批内并行）在 2160×3840 下 4 个特效渲染吞吐高于原 socket+GPU 管线（none/posterize 约 6×），glow 类重采样特效约为 GPU 路径的 0.55×（9.0fps，已低于 60fps 实时）。
-- **双绑定**：wasm 包 93.6KB（gzip 42.5KB），Node 冒烟与 vite dev/build 均通过；python wheel（abi3，Py ≥3.10）在 bmf-demo venv 内直接调用，零拷贝入参。
+- **双绑定**：wasm 包 97.8KB（gzip 43.4KB，2026-09-09 复测），Node 冒烟与 vite dev/build 均通过；python wheel（abi3，Py ≥3.10）在 bmf-demo venv 内直接调用，零拷贝入参。
 
 ## 2. 一致性（compare_backends.py，10 帧，diff = |gpu − rust| / 255）
 
@@ -25,6 +25,23 @@
 - hash2/pcg2d 按 u32 wrapping 算术位级复刻（单测含跨实现参考向量），glitch 的 tick/burst/slice/色块布局与 GPU **完全相同**。
 - glitch 的极少量离群像素来自 fract 边界：GPU varying 插值/采样器坐标计算与 CPU 的 f32 舍入在“恰好落在换行边界附近”的坐标上可能差 1 ulp，导致个别像素采到对侧纹素。当前样片 10 帧实测 pct>2 仅 0.00%（mean 0.003/255，max 34；旧 1664×1080 样片曾测得 0.43%），视觉上为噪声级。
 - 双线性采样器按 WebGPU linear 语义实现（u8/255 f32、clamp 边缘、texel 中心）；rgbsplit0r/glow 的 ±1 LSB 来自 GPU 硬件滤波权重精度，属预期。
+
+### 2.1 2026-09-09 回归复测（hue/glow/rgbsplit 修复后）
+
+修复 `hueRotate`、`glow` 亮部阈值/各向同性半径、`rgbsplit0r` 轴向耦合后重跑
+`compare_backends.py`（4 帧，2160×3840，Apple M3 Max）：
+
+| effect | mean | max | pct>2 | 判定 |
+|---|---|---|---|---|
+| none | 0.000 | 0 | 0.00% | 位级一致 |
+| posterize | 0.000 | 0 | 0.00% | 位级一致 |
+| rgbsplit0r | 0.002 | 1 | 0.00% | ≤1 LSB |
+| glitch | 0.003 | 1 | 0.00% | ≤1 LSB |
+| glow | 0.001 | 1 | 0.00% | ≤1 LSB |
+
+同一轮还用 `compare_wgpu.py` 全量 39 特效对照 Dawn↔wgpu（2 帧），全部
+`mean=0.000`、`pct>2=0.00%`（个别特效 max=1~3 LSB）。wasm 包与 native wheel
+均已按同一份 Rust 源码重建；`node scripts/wasm-smoke.mjs` 通过。
 
 ## 3. 性能（bmf-demo 端到端，400 帧，render 阶段 fps）
 
@@ -45,7 +62,7 @@
 
 | 组件 | 状态 |
 |---|---|
-| effect-rs crate（核心 + 5 特效 + 单测 11 项） | ✅ `npm run test:effect-rs` |
+| effect-rs crate（核心 + 5 特效 + 单测 14 项） | ✅ `npm run test:effect-rs` |
 | wasm 包 effect-rs/pkg（wasm-pack --target web，含 .d.ts） | ✅ `npm run build:effect-rs:wasm` |
 | python wheel（abi3-py310） | ✅ `npm run build:effect-rs:py` |
 | web 双后端切换（WebGPU / Rust CPU (wasm)） | ✅ typecheck + vite build + dev 端点冒烟 |

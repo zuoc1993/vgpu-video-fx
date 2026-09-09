@@ -22,8 +22,8 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   // ponytail: strip-max smear stands in for a real sort network (single-pass
   // cost ceiling); per-strip brightest row pulled across the strip.
   let wpx = max(mix(4.0, 48.0, params.width), 2.0);
-  let strip = floor(v.x * params.resolution.x / wpx);
-  let cx = (strip + 0.5) * wpx / params.resolution.x;
+  let strip = floor(v.x * params.videoSize.x / wpx);
+  let cx = (strip + 0.5) * wpx / max(params.videoSize.x, 1.0);
   var bestLum = -1.0;
   var bestCol = vec3f(0.0);
   for (var i = 0u; i < 8u; i += 1u) {

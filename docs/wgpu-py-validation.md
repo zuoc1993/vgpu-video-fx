@@ -22,6 +22,8 @@ package.json                      # 已加 export:effects 脚本
 2. 渲染语义刻意对齐 sidecar：逐帧 submit（uniform 原地写，不能合批）、clear `[0,0,0,1]`、读回 256 对齐去 padding。
 3. 一致性判定基准：sidecar（Dawn/tint→MSL）是参照系；wgpu-py（wgpu/naga→MSL）是同一块 GPU 的另一条编译链。整数 hash 应位级一致，浮点滤波允许 ±1 LSB 量级差异。
 
+> 2026-09-09 修复回归：全量 39 特效 `compare_wgpu.py`（2 帧，2160×3840）mean=0.000、pct>2=0.00%，个别特效 max=1~3 LSB；native/effect-rs 对照同样 ≤1 LSB。见 `docs/effect-rs-validation.md` §2.1。
+
 ---
 
 ## Step 0 · 环境就绪

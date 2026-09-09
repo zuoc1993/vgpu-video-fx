@@ -5,7 +5,7 @@ export const dustBokehEffect: EffectDefinition = {
   id: "dust-bokeh",
   name: "Dust bokeh",
   category: "氛围",
-  description: "灵感来自 PrismaticShadersPack 尘埃粒子 (MIT)：程序化焦外尘点，深度控制虚化半径。",
+  description: "灵感来自 PrismaticShadersPack 尘埃粒子 (MIT)：程序化暖色焦外尘点，深度控制虚化半径。",
   params: [
     { key: "count", label: "颗粒数", type: "range", min: 4, max: 24, step: 1, default: 16 },
     { key: "size", label: "粒径", type: "range", min: 0.2, max: 2, step: 0.05, default: 1 },

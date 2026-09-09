@@ -37,40 +37,44 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
+  // Source aspect, so a round particle stays round when previewed letterboxed.
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
   let n = max(floor(params.count), 4.0);
+  let warm = vec3f(1.0, 0.82, 0.62);
   var dust = 0.0;
-  var tint = 0.0;
+  var tint = vec3f(0.0);
   for (var i = 0u; i < 24u; i += 1u) {
     let f = f32(i);
     if (f >= n) {
       break;
     }
-    // Base position drifts slowly; depth per particle controls both scale and
-    // blur radius (pre-computed-atlas analogue: sigma = radius*blur).
     let depth = _vgsl_aa51502b__hash1(f * 7.31);
     let drift = vec2f(_vgsl_aa51502b__hash1(f * 13.7 + 1.0), _vgsl_aa51502b__hash1(f * 19.3 + 2.0)) - 0.5;
     var pos = vec2f(_vgsl_aa51502b__hash1(f * 3.3), _vgsl_aa51502b__hash1(f * 5.1)) + drift * 0.2 * params.time;
     pos = vec2f(fract(pos.x), fract(pos.y));
-    // Correct the screen-space offset by aspect so distance reads square.
+    // Fade particles as they wrap across the frame edge instead of popping.
+    let edgeFade = smoothstep(0.0, 0.06, pos.x) * smoothstep(1.0, 0.94, pos.x)
+                 * smoothstep(0.0, 0.06, pos.y) * smoothstep(1.0, 0.94, pos.y);
     let p = vec2f((v.x - pos.x) * ar, v.y - pos.y);
     let r = length(p);
     let bokeh = mix(params.size * 0.02, params.size * 0.05, depth);
     let focusDist = abs(depth - params.focus);
     let sigma = bokeh * (0.4 + focusDist * 1.6);
-    let a = exp(-(r * r) / max(sigma * sigma, 1e-5)) * (0.16 - focusDist * 0.1);
+    let a = exp(-(r * r) / max(sigma * sigma, 1e-5)) * (0.30 - focusDist * 0.15) * edgeFade;
     dust += a;
-    tint += (0.9 + 0.2 * _vgsl_aa51502b__hash1(f * 29.5 + 3.0)) * a;
+    tint += warm * (0.9 + 0.2 * _vgsl_aa51502b__hash1(f * 29.5 + 3.0)) * a;
   }
   let col = _vgsl_17688d6e__sampleVideo(src, samp, v).rgb;
-  // Dust is additive and slightly warm.
-  return vec4f(col + dust * params.opacity * 0.35 * tint, 1.0);
+  // Additive and warm. dust and tint are independent weights; multiplying
+  // them would square the already-small per-particle contribution.
+  let warmColor = tint / max(dust, 1e-5);
+  return vec4f(col + dust * params.opacity * 0.45 * warmColor, 1.0);
 }
 
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -81,8 +85,18 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
+
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
+ 
 
  fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -91,10 +105,17 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
  
 
  
 
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

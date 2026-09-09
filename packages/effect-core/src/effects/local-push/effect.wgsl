@@ -1,4 +1,4 @@
-import { containUv, sampleVideo, zoomAt } from "../shared/video.wgsl";
+import { containUv, sampleVideo, zoomAtAspect } from "../shared/video.wgsl";
 
 struct Params {
   time: f32,
@@ -21,22 +21,25 @@ struct Params {
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let center = vec2f(params.centerX, params.centerY);
+  let aspect = params.videoSize.x / max(params.videoSize.y, 1.0);
   let pulse = 0.5 + 0.5 * sin(params.time * params.speed * 2.2);
   let zoom = 1.0 + params.zoom * params.intensity * (0.25 + 0.9 * pulse);
   var vuv = containUv(uv, params.resolution, params.videoSize);
   let fromCenter = vuv - center;
-  let radial = length(fromCenter);
-  vuv = zoomAt(vuv + fromCenter * radial * params.distortion * 0.45 * pulse, zoom, center);
+  let radialP = vec2f(fromCenter.x * aspect, fromCenter.y);
+  let radialLen = length(radialP);
+  let radialDir = vec2f(radialP.x / aspect, radialP.y) / max(radialLen, 1e-5);
+  vuv = zoomAtAspect(vuv + radialDir * radialLen * params.distortion * 0.45 * pulse, zoom, center, aspect);
 
   let split = params.chromatic * params.intensity * (0.008 + 0.028 * pulse);
   var color = vec3f(0.0);
   let blurAmt = 0.22 * params.intensity * (0.25 + 0.75 * pulse);
   for (var i = 0; i < 10; i += 1) {
     let k = f32(i) / 9.0;
-    let tap = vuv - fromCenter * k * blurAmt;
-    let r = sampleVideo(src, samp, tap + vec2f(split, 0.0)).r;
+    let tap = vuv - radialDir * k * blurAmt;
+    let r = sampleVideo(src, samp, tap + radialDir * split).r;
     let g = sampleVideo(src, samp, tap).g;
-    let b = sampleVideo(src, samp, tap - vec2f(split, 0.0)).b;
+    let b = sampleVideo(src, samp, tap - radialDir * split).b;
     color += vec3f(r, g, b);
   }
   color /= 10.0;

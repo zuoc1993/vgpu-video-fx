@@ -26,7 +26,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let bhPx = max(mix(4.0, max(160.0, 1.0), params.blockHeight), 1.0);
-  let row = floor(v.y * params.resolution.y / bhPx);
+  let row = floor(v.y * params.videoSize.y / bhPx);
   let tick = floor(params.time * mix(6.0, 24.0, params.frequency));
   let h = hash3(vec3f(f32(row), tick * 3.1, 0.0));
 

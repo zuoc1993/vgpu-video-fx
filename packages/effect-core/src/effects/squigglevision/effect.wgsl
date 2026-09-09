@@ -22,5 +22,5 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
   let tick = floor(params.time * params.fps);
   let n = vnoise2(v * params.scale + vec2f(tick * 0.113, tick * 0.071));
-  return sampleVideo(src, samp, v + n * params.strength * 0.02);
+  return sampleVideo(src, samp, v + n * params.strength * 0.05);
 }

@@ -16,7 +16,7 @@
 npm test
 ```
 
-等于：`vgpu doctor` → `check:shaders` → `smoke` → `smoke:sidecar` → `check:frames` → `check:video-wait` → `tsc`。
+等于：`vgpu doctor` → `check:shaders` → `smoke` → `check:regressions` → `smoke:sidecar` → `check:frames` → `check:video-wait` → `tsc`。
 
 单跑：
 
@@ -68,7 +68,7 @@ export const fooEffect: EffectDefinition = {
 };
 ```
 
-WGSL 里 `struct Params` 的字段要和 `uniforms` 对得上（含 `resolution` / `videoSize` 这类 ctx）。采样视频用 `containUv` + `sampleVideo`，越界返回黑，和现有特效一致。
+WGSL 里 `struct Params` 的字段要和 `uniforms` 对得上（含 `resolution` / `videoSize` 这类 ctx）。采样视频用 `containUv` + `sampleVideo`（越界黑）或卷积/模糊用 `sampleVideoClamp`（贴边）；源像素单位的核用 `sourceTexel(canvas, video)`，不要直接写 `1/resolution`，否则预览和离屏会不一致。
 
 `uv` 是**顶原点**（和 WebGPU 纹理、`target.read()` 一样），不要按 Shadertoy 再翻一次 Y，除非你在移植一份底原点 shader。
 

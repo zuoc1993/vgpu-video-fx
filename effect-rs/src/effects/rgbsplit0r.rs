@@ -2,9 +2,9 @@
 
 use crate::effect::{Effect, EffectMeta};
 use crate::frame::to_u8;
-use crate::math::{contain_uv, in_bounds, wgsl_fract};
+use crate::math::{contain_uv, in_bounds};
 use crate::params::{get, param, ParamDef, ParamValues};
-use crate::sampler::sample_linear;
+use crate::sampler::sample_video;
 use crate::{FrameContext, FrameView, FrameViewMut};
 
 pub struct RgbSplit0rEffect;
@@ -15,11 +15,8 @@ static PARAMS: [ParamDef; 2] = [
 ];
 
 #[inline]
-fn channel(src: FrameView<'_>, uv: [f32; 2], axis: f32) -> [f32; 3] {
-    // frei0r semantics: 0.5 is the neutral point, 1.0 maximal offset.
-    let full = (axis - 0.5) * 0.12;
-    let uv2 = [uv[0] + full, uv[1] - full];
-    let c = sample_linear(src, [wgsl_fract(uv2[0]), uv2[1].clamp(0.0, 1.0)]);
+fn channel(src: FrameView<'_>, uv: [f32; 2], offset: [f32; 2]) -> [f32; 3] {
+    let c = sample_video(src, [uv[0] + offset[0], uv[1] + offset[1]]);
     [c[0], c[1], c[2]]
 }
 
@@ -29,7 +26,7 @@ impl Effect for RgbSplit0rEffect {
             id: "rgbsplit0r",
             name: "Rgb split0r",
             category: "故障",
-            description: "frei0r rgbsplit0r 复刻：RGB 通道错位，色差分离（0.5 为中性点）。",
+            description: "frei0r rgbsplit0r 复刻：水平/垂直独立控制 R/B 反向通道错位（0.5 中性）。",
             params: &PARAMS,
         }
     }
@@ -53,9 +50,10 @@ impl Effect for RgbSplit0rEffect {
                     row[i + 3] = 255;
                     continue;
                 }
-                let r = channel(src, vuv, horizontal)[0];
-                let b = channel(src, vuv, vertical)[2];
-                let g = channel(src, vuv, 0.5)[1];
+                let offset = [(horizontal - 0.5) * 0.12, (vertical - 0.5) * 0.12];
+                let r = channel(src, vuv, offset)[0];
+                let b = channel(src, vuv, [-offset[0], -offset[1]])[2];
+                let g = sample_video(src, vuv)[1];
                 let i = x as usize * 4;
                 row[i] = to_u8(r);
                 row[i + 1] = to_u8(g);

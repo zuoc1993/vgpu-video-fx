@@ -38,19 +38,20 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     sin(v.y * params.freq * 6.28318 + sin(t * 1.7) * 2.0) + sin(v.y * params.freq * 3.7 - t * 2.3) * 0.5,
     sin(v.x * params.freq * 1.3 + t * 1.9) * 0.7 + sin(v.x * params.freq * 2.9 - t) * 0.5
   );
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
   let p = vec2f((v.x - 0.5) * ar, v.y - 0.5);
   let a = sin(t * 0.62) * params.swirl * 0.25;
   let c = cos(a);
   let s = sin(a);
   let q = vec2f(p.x * c - p.y * s, p.x * s + p.y * c);
-  return _vgsl_17688d6e__sampleVideo(src, samp, v + d * params.amp + (q - p));
+  let disp = d * params.amp + vec2f((q - p).x / ar, (q - p).y);
+  return _vgsl_17688d6e__sampleVideo(src, samp, v + disp);
 }
 
 // vgsl-module: /Users/zuoc/Documents/vscode/vgpu-video-fx/packages/effect-core/src/effects/shared/video.wgsl
 // Pure helpers: no @group/@binding. Entry shaders own resources.
 
- fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+ fn _vgsl_17688d6e__containScale(canvas: vec2f, video: vec2f) -> vec2f {
   let canvasSafe = max(canvas, vec2f(1.0));
   let videoSafe = max(video, vec2f(1.0));
   let canvasAspect = canvasSafe.x / canvasSafe.y;
@@ -61,8 +62,18 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   } else {
     scale.y = canvasAspect / videoAspect;
   }
+  return scale;
+}
+
+ fn _vgsl_17688d6e__containUv(uv: vec2f, canvas: vec2f, video: vec2f) -> vec2f {
+  let scale = _vgsl_17688d6e__containScale(canvas, video);
   return (uv - vec2f(0.5)) / scale + vec2f(0.5);
 }
+
+// Step in video UV that corresponds to one output pixel, after containUv.
+// Use this for source-space kernels (Sobel/emboss/glow) instead of 1/resolution,
+// otherwise preview and offscreen renders diverge when the canvas aspect differs.
+ 
 
  fn _vgsl_17688d6e__sampleVideo(src: texture_2d<f32>, samp: sampler, uv: vec2f) -> vec4f {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -71,10 +82,17 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return textureSampleLevel(src, samp, uv, 0.0);
 }
 
+// Edge-clamped source sample for convolution/blur kernels: a uniform frame must
+// not grow a false white border, and blur halos must not eat the video edges.
  
 
  
 
+// Aspect-corrected rotation: uv is video UV, aspect = videoWidth / videoHeight.
+ 
+
+// Aspect-corrected zoom: a circular magnification in pixel space, not an
+// ellipse in UV space (which is what naive (uv-center)/zoom does on non-square video).
  
 
  

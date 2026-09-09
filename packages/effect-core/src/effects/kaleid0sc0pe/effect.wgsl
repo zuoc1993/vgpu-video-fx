@@ -20,8 +20,8 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   if (v.x < 0.0 || v.x > 1.0 || v.y < 0.0 || v.y > 1.0) {
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
-  let ar = params.resolution.x / max(params.resolution.y, 1.0);
-  let p = vec2f((v.x - 0.5) * ar, v.y - 0.5) / max(params.zoom, 0.1);
+  let ar = params.videoSize.x / max(params.videoSize.y, 1.0);
+  let p = vec2f((v.x - 0.5) * ar, v.y - 0.5);
   let r = length(p);
   let n = max(floor(params.segs), 3.0);
   let sector = 6.2831853 / n;
@@ -30,5 +30,5 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   let a = ang - floor(ang / sector) * sector;
   let reflected = sector * 0.5 - abs(a - sector * 0.5);
   let q = vec2f(cos(reflected), sin(reflected)) * r;
-  return sampleVideo(src, samp, q / vec2f(ar, 1.0) * params.zoom + 0.5);
+  return sampleVideo(src, samp, q / vec2f(ar, 1.0) / max(params.zoom, 0.1) + 0.5);
 }
