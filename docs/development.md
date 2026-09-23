@@ -31,6 +31,10 @@ npm run typecheck
 
 ## 加一个特效
 
+> 从 AE 里的现成特效移植：走 [ae-port skill](../.agents/skills/ae-port/SKILL.md)，用
+> [tools/ae-export/](../tools/ae-export/README.md) 的面板导出对照帧，再
+> `npm run check:ae-parity <fixturesDir>` 做数值 diff。
+
 1. 建目录 `packages/effect-core/src/effects/<id>/`
    - `effect.wgsl`：全屏 fragment（vgpu 会补 triangle + `@location(0) uv`）
    - `index.ts`：`EffectDefinition`

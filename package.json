@@ -23,7 +23,8 @@
     "test:effect-rs": "cargo test --manifest-path effect-rs/Cargo.toml",
     "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
     "test": "npx vgpu doctor && npm run check:shaders && npm run smoke && npm run check:regressions && npm run smoke:sidecar && npm run check:frames && npm run check:video-wait && npm run typecheck",
-    "check:regressions": "node scripts/check-effect-regressions.mjs"
+    "check:regressions": "node scripts/check-effect-regressions.mjs",
+    "check:ae-parity": "node scripts/check-ae-parity.mjs"
   },
   "dependencies": {
     "vgpu": "^0.4.0"
