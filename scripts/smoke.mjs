@@ -1,12 +1,9 @@
-import { existsSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { resolveShader } from "@vgpu/wgsl/runtime";
+import { register } from "node:module";
 import { init } from "vgpu/node";
-import { EffectEngine } from "../packages/effect-core/src/engine.ts";
 
-const root = path.join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const effectsDir = path.join(root, "packages/effect-core/src/effects");
+// Node has no Vite .wgsl loader; register the same export loader before pulling the real catalog.
+register(new URL("./wgsl-export-loader.mjs", import.meta.url));
+const { EffectEngine } = await import("../packages/effect-core/src/engine.ts");
 
 const cases = {
   none: {},
@@ -50,15 +47,6 @@ const cases = {
   "curtain-wind": { strength: 0.6, folds: 3.5, speed: 1, gust: 0.7, sway: 0.5, bleed: 0.6 },
 };
 
-const ids = readdirSync(effectsDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && entry.name !== "shared")
-  .map((entry) => entry.name)
-  .sort();
-
-for (const id of ids) {
-  if (!(id in cases)) throw new Error(`smoke missing params for ${id}`);
-}
-
 const size = 32;
 const data = new Uint8Array(size * size * 4);
 for (let i = 0; i < data.length; i += 4) {
@@ -69,42 +57,17 @@ for (let i = 0; i < data.length; i += 4) {
 }
 
 let gpuError;
-const catalog = [];
-for (const id of ids) {
-  const entry = existsSync(path.join(effectsDir, id, "effect.wgsl"))
-    ? path.join(effectsDir, id, "effect.wgsl")
-    : path.join(effectsDir, "zoom-in", "effect.wgsl");
-  const resolved = await resolveShader({ entry, validate: "require" });
-  const fixed = cases[id];
-  catalog.push({
-    id,
-    name: id,
-    category: "test",
-    description: "",
-    params: [],
-    shader: { version: 1, wgsl: resolved.wgsl },
-    uniforms(_values, ctx) {
-      return {
-        params: {
-          ...fixed,
-          time: ctx.time,
-          videoTime: ctx.videoTime,
-          resolution: ctx.resolution,
-          videoSize: ctx.videoSize,
-        },
-      };
-    },
-  });
-}
-
 const gpu = await init();
 const engine = await EffectEngine.create({
   gpu,
-  catalog,
   onError: (error) => {
     gpuError = error;
   },
 });
+
+for (const def of engine.catalog) {
+  if (!(def.id in cases)) throw new Error(`smoke missing params for ${def.id}`);
+}
 
 const none = await engine.render({
   effect: "none",
@@ -126,18 +89,19 @@ if (gpuError) throw gpuError;
 if (batch.length !== 3) throw new Error(`batch length ${batch.length}`);
 for (const frame of batch) assertNear(frame.data, data, "none batch");
 
-for (const id of ids) {
-  if (id === "none") continue;
+for (const def of engine.catalog) {
+  if (def.id === "none") continue;
   const out = await engine.render({
-    effect: id,
+    effect: def.id,
+    params: cases[def.id],
     time: 0.3,
     videoTime: 0.4,
     frame: { width: size, height: size, data },
   });
   if (gpuError) throw gpuError;
   const center = (16 * size + 16) * 4;
-  if (out.data[center + 3] === 0) throw new Error(`${id} wrote a transparent center`);
-  console.log(`ok ${id}`);
+  if (out.data[center + 3] === 0) throw new Error(`${def.id} wrote a transparent center`);
+  console.log(`ok ${def.id}`);
 }
 
 console.log("ok none");

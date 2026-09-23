@@ -77,6 +77,7 @@ export class EffectEngine {
     const samp = sampler(gpu, { minFilter: "linear", magFilter: "linear" });
     const placeholder = gpu.device.createTexture({
       label: "effect-placeholder",
+      kind: "2d",
       size: [4, 4],
       format: "rgba8unorm",
       usage: ["copy_dst", "texture_binding"],
@@ -142,7 +143,7 @@ export class EffectEngine {
     const dest = this.ensureOut(width, height);
     await this.compile({ colors: [dest.format] });
     this.draw(opts, uploaded, dest);
-    const data = await dest.read();
+    const data = await dest.color.read({ mipLevel: 0, region: "all" });
     await this.gpu.settled();
     return {
       width,
@@ -192,7 +193,7 @@ export class EffectEngine {
       prev = time;
     }
     const t1 = performance.now();
-    const pixels = await Promise.all(dests.map((dest) => dest.read()));
+    const pixels = await Promise.all(dests.map((dest) => dest.color.read({ mipLevel: 0, region: "all" })));
     const t2 = performance.now();
     await this.gpu.settled();
     if (timing) console.error(`engine ×${opts.frames.length}: upload ${uploadMs.toFixed(1)}ms draw ${drawMs.toFixed(1)}ms readback ${(t2 - t1).toFixed(1)}ms settle ${(performance.now() - t2).toFixed(1)}ms (total ${(performance.now() - t0).toFixed(1)}ms)`);
@@ -273,6 +274,7 @@ export class EffectEngine {
     if (this.srcTex) this.retire(this.srcTex);
     this.srcTex = this.gpu.device.createTexture({
       label: "effect-src",
+      kind: "2d",
       size: [width, height],
       format: "rgba8unorm",
       usage: ["copy_dst", "texture_binding", "render_attachment"],
